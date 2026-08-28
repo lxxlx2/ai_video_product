@@ -1,0 +1,51 @@
+{
+  "schema_version": "0.1",
+  "slides": [
+    {
+      "audio_seconds": 9.92,
+      "duration_seconds": 10.47,
+      "end_seconds": 10.47,
+      "lead_seconds": 0.15,
+      "slide": 1,
+      "start_seconds": 0.0,
+      "tail_seconds": 0.4
+    },
+    {
+      "audio_seconds": 11.36,
+      "duration_seconds": 11.91,
+      "end_seconds": 22.38,
+      "lead_seconds": 0.15,
+      "slide": 2,
+      "start_seconds": 10.47,
+      "tail_seconds": 0.4
+    },
+    {
+      "audio_seconds": 10.4,
+      "duration_seconds": 10.95,
+      "end_seconds": 33.33,
+      "lead_seconds": 0.15,
+      "slide": 3,
+      "start_seconds": 22.38,
+      "tail_seconds": 0.4
+    },
+    {
+      "audio_seconds": 9.44,
+      "duration_seconds": 9.99,
+      "end_seconds": 43.32,
+      "lead_seconds": 0.15,
+      "slide": 4,
+      "start_seconds": 33.33,
+      "tail_seconds": 0.4
+    },
+    {
+      "audio_seconds": 12.56,
+      "duration_seconds": 13.11,
+      "end_seconds": 56.43,
+      "lead_seconds": 0.15,
+      "slide": 5,
+      "start_seconds": 43.32,
+      "tail_seconds": 0.4
+    }
+  ],
+  "total_duration_seconds": 56.43
+}

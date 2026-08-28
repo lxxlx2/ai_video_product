@@ -1,0 +1,65 @@
+{
+  "detected_language": "en",
+  "dominant_language": "en",
+  "mixed_language_mode": "dominant",
+  "mode": "auto",
+  "profile_id": "en-male-25-default",
+  "profile_revision": 1,
+  "profile_store_root": "/Users/jerson/AI/runtime/voice-profiles",
+  "reference_sha256": "9a72457b9c4302d00664128f18141d289e00f935977b8e0acf31c6790ff56371",
+  "schema_version": "0.1",
+  "slides": [
+    {
+      "language": "en",
+      "profile_id": "en-male-25-default",
+      "profile_revision": 1,
+      "reference_sha256": "9a72457b9c4302d00664128f18141d289e00f935977b8e0acf31c6790ff56371",
+      "script_sha256": "c05b249cef9ed21c3bc46625b77c3d981a677c500451458ad3a214280195d058",
+      "slide": 1,
+      "source": "owner-provided-script",
+      "text": "Hi, I'm Jason Liu. One campus activity I organized was a hands-on AI builder session for students who were curious about technology but did not know how to start."
+    },
+    {
+      "language": "en",
+      "profile_id": "en-male-25-default",
+      "profile_revision": 1,
+      "reference_sha256": "9a72457b9c4302d00664128f18141d289e00f935977b8e0acf31c6790ff56371",
+      "script_sha256": "cb169ea2dc6b9e580f2777c5fc2d8280278f737c339e4fd74f097416df1084ef",
+      "slide": 2,
+      "source": "owner-provided-script",
+      "text": "The goal was simple: make the first step small enough that everyone could finish it. I prepared a short walkthrough, helped participants choose a problem, then guided them from idea to a basic prototype plan."
+    },
+    {
+      "language": "en",
+      "profile_id": "en-male-25-default",
+      "profile_revision": 1,
+      "reference_sha256": "9a72457b9c4302d00664128f18141d289e00f935977b8e0acf31c6790ff56371",
+      "script_sha256": "dcdfbd3e015eafc2d1141d1418e7cbb6bc3ce7ea1366fa15a030405899b16d69",
+      "slide": 3,
+      "source": "owner-provided-script",
+      "text": "Instead of giving a long lecture, I structured the session around three actions: define a user problem, design the smallest demo, and explain it clearly in one minute."
+    },
+    {
+      "language": "en",
+      "profile_id": "en-male-25-default",
+      "profile_revision": 1,
+      "reference_sha256": "9a72457b9c4302d00664128f18141d289e00f935977b8e0acf31c6790ff56371",
+      "script_sha256": "5a0c880f94267bcd0f55e0256b90ccc28718b64f1f5097cb30788327b6827067",
+      "slide": 4,
+      "source": "owner-provided-script",
+      "text": "People could ask questions while working, so the room felt like a build night. The main thing I learned is that student communities grow when the organizer removes friction."
+    },
+    {
+      "language": "en",
+      "profile_id": "en-male-25-default",
+      "profile_revision": 1,
+      "reference_sha256": "9a72457b9c4302d00664128f18141d289e00f935977b8e0acf31c6790ff56371",
+      "script_sha256": "3e88c39fbc2a095023cbb8f79a38b6b8cc2ec3afccff30e90ea29b990d600bd2",
+      "slide": 5,
+      "source": "owner-provided-script",
+      "text": "For Solana University, I would use the same format: beginner-friendly workshops, weekly building time, and a demo day where students can show useful payments, agent, or consumer app prototypes."
+    }
+  ],
+  "target_language": null,
+  "warning": null
+}
