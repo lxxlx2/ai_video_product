@@ -1,0 +1,27 @@
+{
+  "cloud_fallback": false,
+  "detected_language": "en",
+  "duration_seconds": 59.998,
+  "failures": [],
+  "job_id": "solana-video-1-final",
+  "narration_mode": "auto",
+  "output_path": "output/presentation.mp4",
+  "output_sha256": "a9b454c571269c951463f45d9caf34b21d1b0571a043e018bc911aa64db76913",
+  "profile_id": "en-male-25-default",
+  "profile_revision": 1,
+  "render_hashes": [
+    "16297967d605af74aec8e6b8902434a9bd3c538528a56905bc8fc371b5f02cb9",
+    "6258b7453a561853ecd4e8d6b72a5a46fe322639b4139563d01ae2f2ec36f08a",
+    "46aefd390f3871bd9d7f53cf54ece7cb1cd49b6be10c45bba39b3bd11f9879f9",
+    "8ab2e77ab282dd35ccf2cac16c5784dabe45b5022dbd05348d365b7a71e63394",
+    "fa411a2e9fd283dd0eeb9a4ab204e6ebfabdcb608ef28b531dd3cc6d5020ff82"
+  ],
+  "schema_version": "0.1",
+  "selected_language": "en",
+  "slide_count": 5,
+  "slides": [],
+  "source_path": "source/presentation.pptx",
+  "source_sha256": "4aa492069dd405c375507ebb8f054cb1a46e66a96fde6f0ebd762df92e31287c",
+  "stage": "COMPLETED",
+  "timeline_duration_seconds": 59.95
+}
