@@ -96,6 +96,15 @@ This repository is public. Never publish automatically:
 
 Private persona/training assets remain under the Owner-private local platform roots.
 
+## Livestream clip candidate tool
+
+[`tools/create_vertical_clip.py`](tools/create_vertical_clip.py) creates a
+bounded 1080x1920 clip candidate from an explicit local video and SRT. It writes
+only to the private runtime, records input and output hashes, and leaves human
+approval pending. See
+[`docs/livestream-vertical-slice.md`](docs/livestream-vertical-slice.md) for the
+repeatable representative command and artifact contract.
+
 ## Local retention
 
 Large local WAV/PNG/PDF/segment/render intermediates may be removed only after successful remote publish verification. Small durable job/audit records should remain locally according to platform retention policy. Source material is retained by default unless the Owner explicitly approves a different retention policy.
