@@ -10,6 +10,8 @@ The same ACE-Step runtime will later support original text/lyrics-to-song creati
 
 The target for this task is musical similarity and iterative control. Exact waveform-level duplication is not assumed.
 
+Long-term operation is Codex-led: the Owner discusses the song, reviews results and approves one exact candidate. Codex handles local model calls, candidate iteration, Git publication and cleanup. See [`docs/CODEX_ORCHESTRATION.md`](docs/CODEX_ORCHESTRATION.md).
+
 ## Runtime boundary
 
 - ACE-Step lives in its own runtime directory and environment.
@@ -84,8 +86,8 @@ Use [`docs/REPRODUCTION_RUNBOOK.md`](docs/REPRODUCTION_RUNBOOK.md):
 6. generate multiple seeds and keep the closest candidate;
 7. use Repaint only for weak regions;
 8. try the `quality` profile when useful;
-9. preserve parameters and hashes for candidates worth keeping;
-10. select one final product and publish only that approved audio plus lightweight metadata.
+9. keep parameters and hashes only while the task is active;
+10. select one final product and publish only that approved audio as the durable per-song product.
 
 ## Profiles
 
@@ -105,26 +107,27 @@ Preferred final master:
 output/final.wav
 ```
 
-Optional delivery copies may also be retained as `final.flac`, `final.m4a`, or `final.mp3` when useful.
-
-Rejected candidates, stems, repaint fragments, temporary WAV conversions, logs, caches, and other working files stay local and are deleted after the final Git-backed artifact has been pushed and verified. See [`docs/RETENTION_AND_CLEANUP.md`](docs/RETENTION_AND_CLEANUP.md).
+The completed-song target is one local `final.wav` plus one Git LFS `final.wav` containing identical approved bytes. Rejected candidates, task-specific prompts/config, stems, repaint fragments, converted references, logs and caches are removed after remote verification. See [`docs/RETENTION_AND_CLEANUP.md`](docs/RETENTION_AND_CLEANUP.md).
 
 ## Files
 
-- `generated/lyrics.txt`: current lyrics used for local reproduction.
-- `generated/style.txt`: concise style/vocal prompt.
-- `config/reproduction.json`: pinned upstream revision, profiles, paths, source metadata, and reproduction targets.
-- `metadata/reference.json`: safe technical source record and SHA-256.
+- `generated/lyrics.txt`: current lyrics used during the active reproduction task.
+- `generated/style.txt`: current style/vocal prompt used during active work.
+- `config/reproduction.json`: active-task reproduction configuration.
+- `metadata/reference.json`: safe technical source record and SHA-256 during the active task.
 - `metadata/preflight-2026-09-10.md`: first successful Apple Silicon preflight evidence.
 - `scripts/preflight_macos.sh`: read-only host/runtime preflight.
 - `scripts/bootstrap_acestep_macos.sh`: isolated pinned ACE-Step install.
 - `scripts/prepare_reference.sh`: source verification and local WAV preparation.
 - `scripts/launch_acestep_macos.sh`: foreground smoke/repro/quality launcher.
 - `docs/REPRODUCTION_RUNBOOK.md`: detailed step-by-step reproduction process.
-- `docs/RETENTION_AND_CLEANUP.md`: final-artifact retention and cleanup policy.
+- `docs/CODEX_ORCHESTRATION.md`: target hands-off Codex orchestration architecture.
+- `docs/RETENTION_AND_CLEANUP.md`: final-only product retention and cleanup policy.
+
+Task-specific lyrics, style, configs and source metadata are working artifacts. They can be deleted from the completed task after final publication when the strict one-product-file end state is used. Shared generic workflow documentation and scripts remain repository infrastructure.
 
 ## Current status
 
 The first read-only Apple Silicon preflight passed on 2026-09-10. Verified at that point: arm64, macOS 26.6.2, git/ffmpeg/ffprobe/shasum/lsof/uv present, about 48 GiB physical memory, 72% system-wide memory free, about 511 GiB free disk space, and port 8215 available. See `metadata/preflight-2026-09-10.md`.
 
-Next step: run the isolated pinned ACE-Step bootstrap. Local model generation and quality validation are still pending. No existing runtime has been modified by the repository changes or preflight.
+ACE-Step bootstrap is currently being executed on the Owner machine. Local model generation and quality validation are still pending. No existing unrelated runtime has been modified by the repository changes or preflight.
