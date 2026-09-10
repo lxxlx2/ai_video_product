@@ -1,4 +1,4 @@
-# Private/reference audio stays local until explicit Owner publication approval.
+# Private/reference audio stays local during creation/reproduction work.
 source/*.m4a
 source/*.mp3
 source/*.wav
@@ -13,18 +13,25 @@ output/*.wav
 output/*.flac
 output/*.m4a
 output/*.mp3
+output/*.aac
+output/*.ogg
 output/*.mp4
 output/candidates/
 output/stems/
 output/repaint/
 
-# Explicit publication targets are allowed only after Owner approval.
+# Stable approved publication targets are allowed after final selection.
 !output/final.wav
 !output/final.flac
+!output/final.m4a
+!output/final.mp3
 
-# Local runtime notes, logs and caches.
+# Local runtime notes, logs, caches, temporary analysis and working files.
 .local/
 logs/
 cache/
+tmp/
+work/
+analysis/
 *.log
 .DS_Store
