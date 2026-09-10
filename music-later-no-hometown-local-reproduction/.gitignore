@@ -1,0 +1,26 @@
+# Private/reference audio stays local until explicit Owner publication approval.
+source/*.m4a
+source/*.mp3
+source/*.wav
+source/*.flac
+source/*.mp4
+source/*.aac
+source/*.ogg
+source/stems/
+
+# Generated candidates and local intermediates stay local by default.
+output/*.wav
+output/*.flac
+output/*.m4a
+output/*.mp3
+output/*.mp4
+output/candidates/
+output/stems/
+output/repaint/
+
+# Local runtime notes, logs and caches.
+.local/
+logs/
+cache/
+*.log
+.DS_Store
