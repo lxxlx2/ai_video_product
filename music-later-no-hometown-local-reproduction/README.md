@@ -1,24 +1,25 @@
 # 后来没有故乡 · Local Reproduction
 
-This task records a reproducible local workflow for rebuilding the approved reference song with ACE-Step 1.5 on Apple Silicon while preserving the existing local AI platform.
+This task records a reproducible local workflow for rebuilding the approved reference song with ACE-Step 1.5 on Apple Silicon, and serves as the first concrete local music-generation workflow for future original songs.
 
 ## Goal
 
 Start from the Owner-selected Suno reference file and produce a close local reproduction with controllable lyrics, structure, vocal character, arrangement, seeds, and local repaint/edit passes.
 
-The target is musical similarity and iterative control. Exact waveform-level duplication is not assumed.
+The same ACE-Step runtime will later support original text/lyrics-to-song creation without requiring a Suno reference.
 
-## Safety boundary
+The target for this task is musical similarity and iterative control. Exact waveform-level duplication is not assumed.
 
-- Existing local-ai-platform services are not modified or restarted by this task.
+## Runtime boundary
+
 - ACE-Step lives in its own runtime directory and environment.
 - The service binds to localhost only.
-- The reference M4A, derived WAV, stems, model weights, caches, and unapproved output audio stay local.
-- Scripts never kill unrelated processes or close user applications.
-- Heavy music generation is on-demand. Normal desktop work keeps priority.
+- The reference M4A, derived WAV, stems, model weights, caches, and unapproved output audio stay local during work.
+- Scripts never kill unrelated processes or modify unrelated runtimes.
 - No paid/cloud fallback is enabled.
+- Current execution does not require proving simultaneous coexistence with the older Qwen stack. Future platform-wide routing can be revisited after the `codex-web-bridge` direction is settled.
 
-Architecture decision: `lxxlx2/local-ai-platform/docs/architecture/ADR-0007-local-music-generation-and-reference-reproduction.md` on branch `feat/local-music-reproduction-v01`.
+Architecture record: `lxxlx2/local-ai-platform/docs/architecture/ADR-0007-local-music-generation-and-reference-reproduction.md` on branch `feat/local-music-reproduction-v01`.
 
 ## Reference
 
@@ -40,20 +41,22 @@ audio bitrate: about 127.5 kbps
 sha256: 176c81b30cbd68de6cd7c900d1513160f9a6a591eb7e9bed65d848f273c48b0e
 ```
 
-The audio itself is intentionally not committed to this public repository.
+The reference audio itself is intentionally not committed to the public repository.
 
 ## First deployment
 
-From a local clone of this repository:
+From the confirmed local repository path:
 
 ```bash
-cd music-later-no-hometown-local-reproduction
+cd /Users/jerson/ai_video_product
+git fetch origin
+git switch feat/local-music-reproduction-v01
+git pull --ff-only
 
+cd music-later-no-hometown-local-reproduction
 bash scripts/preflight_macos.sh
 bash scripts/bootstrap_acestep_macos.sh
-
 bash scripts/prepare_reference.sh "/path/to/后来没有故乡.m4a"
-
 bash scripts/launch_acestep_macos.sh smoke
 ```
 
@@ -71,32 +74,44 @@ http://127.0.0.1:8215
 
 ## Reproduction sequence
 
-Use the workflow in [`docs/REPRODUCTION_RUNBOOK.md`](docs/REPRODUCTION_RUNBOOK.md):
+Use [`docs/REPRODUCTION_RUNBOOK.md`](docs/REPRODUCTION_RUNBOOK.md):
 
 1. verify source hash and convert a local 48 kHz WAV working copy;
 2. start with the `repro` profile;
 3. run Audio Understanding and record BPM/key/time-signature/caption;
-4. run a reference-guided generation using `generated/lyrics.txt` and `generated/style.txt`;
-5. run Cover against the full local reference;
+4. run reference-guided generation using `generated/lyrics.txt` and `generated/style.txt`;
+5. run Remix against the full local reference;
 6. generate multiple seeds and keep the closest candidate;
 7. use Repaint only for weak regions;
-8. if the workstation remains healthy, try the `quality` profile;
-9. preserve parameters and hashes for every candidate worth keeping;
-10. publish an audio master only after explicit Owner approval.
+8. try the `quality` profile when useful;
+9. preserve parameters and hashes for candidates worth keeping;
+10. select one final product and publish only that approved audio plus lightweight metadata.
 
 ## Profiles
 
 | Profile | DiT | LM | Purpose |
 |---|---|---|---|
 | `smoke` | `acestep-v15-turbo` | `acestep-5Hz-lm-0.6B` | installation/runtime proof |
-| `repro` | `acestep-v15-xl-turbo` | `acestep-5Hz-lm-1.7B` | first real reference/cover attempts |
-| `quality` | `acestep-v15-xl-sft` | `acestep-5Hz-lm-4B` | higher-quality candidate after resource evidence |
+| `repro` | `acestep-v15-xl-turbo` | `acestep-5Hz-lm-1.7B` | first real reference/remix attempts |
+| `quality` | `acestep-v15-xl-sft` | `acestep-5Hz-lm-4B` | higher-quality candidate |
 
-The `quality` profile is not automatically production-safe merely because the machine has 48 GiB unified memory. Keep normal applications open and treat resource pressure as valid evidence.
+## Git audio policy
+
+Git can store the final audio. This repository tracks approved audio through Git LFS for WAV, FLAC, M4A, MP3, AAC, and OGG.
+
+Preferred final master:
+
+```text
+output/final.wav
+```
+
+Optional delivery copies may also be retained as `final.flac`, `final.m4a`, or `final.mp3` when useful.
+
+Rejected candidates, stems, repaint fragments, temporary WAV conversions, logs, caches, and other working files stay local and are deleted after the final Git-backed artifact has been pushed and verified. See [`docs/RETENTION_AND_CLEANUP.md`](docs/RETENTION_AND_CLEANUP.md).
 
 ## Files
 
-- `generated/lyrics.txt`: current single-version lyrics used for local reproduction.
+- `generated/lyrics.txt`: current lyrics used for local reproduction.
 - `generated/style.txt`: concise style/vocal prompt.
 - `config/reproduction.json`: pinned upstream revision, profiles, paths, source metadata, and reproduction targets.
 - `metadata/reference.json`: safe technical source record and SHA-256.
@@ -105,7 +120,8 @@ The `quality` profile is not automatically production-safe merely because the ma
 - `scripts/prepare_reference.sh`: source verification and local WAV preparation.
 - `scripts/launch_acestep_macos.sh`: foreground smoke/repro/quality launcher.
 - `docs/REPRODUCTION_RUNBOOK.md`: detailed step-by-step reproduction process.
+- `docs/RETENTION_AND_CLEANUP.md`: final-artifact retention and cleanup policy.
 
 ## Current status
 
-Repository state is workflow-ready. Local installation and representative-workload qualification have not yet been executed on the Owner machine. No model is marked qualified and no existing platform capability has been changed.
+Repository workflow and retention policy are ready. Local ACE-Step installation has not yet been executed on the Owner machine. No existing runtime is modified by the repository changes themselves.
