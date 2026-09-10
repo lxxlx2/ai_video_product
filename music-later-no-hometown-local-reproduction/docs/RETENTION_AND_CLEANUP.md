@@ -1,60 +1,74 @@
 # Retention and Cleanup Policy
 
-This task keeps Git as the durable store for the approved final product and lightweight reproducibility metadata. Large working artifacts remain local only while they are useful.
+This workflow uses a final-only product policy for completed songs.
 
-## Durable artifacts
+## Durable product copies
 
-Keep in Git after final approval:
+For each approved song, keep exactly one durable local product copy and one durable Git product copy containing the same approved audio bytes.
 
-- `output/final.wav` as the preferred archival master when available;
-- optional `output/final.flac`, `output/final.m4a`, or `output/final.mp3` delivery copies when intentionally retained;
-- final lyrics and style prompt;
-- generation configuration and selected seed/parameters;
-- final SHA-256 and provenance metadata;
-- scripts and runbooks needed to reproduce the workflow.
+Preferred paths:
 
-Repository audio uses Git LFS.
+```text
+local:
+~/AI/final/music/<song-slug>/final.wav
 
-## Temporary artifacts
+Git:
+<song-task>/output/final.wav
+```
 
-Delete after the final artifact has been pushed and verified remotely:
+Both copies must have the same SHA-256 before cleanup begins. The Git copy uses Git LFS.
+
+Shared repository infrastructure such as generic scripts, runbooks and workflow documentation remains in Git. Task-specific working artifacts do not become durable products by default.
+
+## Temporary job artifacts
+
+Delete after the approved final artifact has been pushed and verified remotely:
 
 - rejected candidate songs;
+- alternate seeds;
 - repaint fragments;
-- extracted stems used only during editing;
+- extracted stems;
 - converted working WAV copies;
-- waveform/spectrogram/analysis caches;
+- reference audio used for a completed reproduction job, unless explicitly retained;
+- task-specific lyrics/style/job JSON used only during generation;
+- waveform, spectrogram and analysis caches;
 - temporary metadata exports;
 - task-specific logs;
 - temporary downloads and scratch files;
-- duplicate local copies of the final artifact once the Git-backed copy has been verified.
+- duplicate local copies of the final artifact.
 
 ## Reference audio
 
-The Suno reference file and its converted working copy are local inputs. They are never committed by default. Once local reproduction is complete and no further comparison or repaint work is planned, they may be deleted together with the other task intermediates.
+Reference audio is a temporary input by default. Keep it while comparison, cover generation or repaint work is active. After final approval and verified publication, delete it with the other task working files unless the Owner explicitly chooses to retain it.
 
-If the reference is intentionally retained for later A/B testing, keep only one canonical local copy plus its SHA-256 metadata and remove duplicates.
+A hash may remain in generic workflow evidence while the source audio itself is removed.
 
 ## Model/runtime retention
 
-ACE-Step model weights and its isolated runtime are shared capability assets, not per-song products. Keep them after this song if local music creation will continue. Remove them only when the Owner decides to retire the local music capability.
+ACE-Step model weights and the isolated runtime are shared capability assets. They remain installed while local music creation is in use and can be removed later if the capability is retired.
 
-Do not delete or modify unrelated runtimes as part of this task.
+They are not counted as per-song intermediates.
 
 ## Finalization order
 
-Use this order so cleanup never destroys the only good copy:
+Use this order:
 
 ```text
-select final candidate
--> compute SHA-256
--> copy/rename to output/final.<format>
+select candidate
+-> Owner approves exact candidate
+-> compute and bind SHA-256
+-> write one canonical local final.wav
+-> write the same bytes to Git output/final.wav
+-> verify both SHA-256 values match
 -> commit through Git LFS
 -> push
 -> verify remote commit and LFS object
 -> verify final audio can be retrieved/opened
--> delete local candidates/intermediates/reference working copies
--> keep only shared model/runtime if future music work is planned
+-> delete task-specific candidates, references, prompts, stems, caches and logs
 ```
 
-Cleanup is intentionally after remote verification. Do not delete intermediates before the final artifact is confirmed durable.
+Cleanup begins only after remote verification. This prevents deletion of the only good candidate before the final product is durable.
+
+## Replacement of an approved final
+
+A later revision requires a new exact candidate approval. Codex or any automation may not silently overwrite an approved final artifact and treat it as the same release.
