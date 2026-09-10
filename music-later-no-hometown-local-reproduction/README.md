@@ -115,6 +115,7 @@ Rejected candidates, stems, repaint fragments, temporary WAV conversions, logs, 
 - `generated/style.txt`: concise style/vocal prompt.
 - `config/reproduction.json`: pinned upstream revision, profiles, paths, source metadata, and reproduction targets.
 - `metadata/reference.json`: safe technical source record and SHA-256.
+- `metadata/preflight-2026-09-10.md`: first successful Apple Silicon preflight evidence.
 - `scripts/preflight_macos.sh`: read-only host/runtime preflight.
 - `scripts/bootstrap_acestep_macos.sh`: isolated pinned ACE-Step install.
 - `scripts/prepare_reference.sh`: source verification and local WAV preparation.
@@ -124,4 +125,6 @@ Rejected candidates, stems, repaint fragments, temporary WAV conversions, logs, 
 
 ## Current status
 
-Repository workflow and retention policy are ready. Local ACE-Step installation has not yet been executed on the Owner machine. No existing runtime is modified by the repository changes themselves.
+The first read-only Apple Silicon preflight passed on 2026-09-10. Verified at that point: arm64, macOS 26.6.2, git/ffmpeg/ffprobe/shasum/lsof/uv present, about 48 GiB physical memory, 72% system-wide memory free, about 511 GiB free disk space, and port 8215 available. See `metadata/preflight-2026-09-10.md`.
+
+Next step: run the isolated pinned ACE-Step bootstrap. Local model generation and quality validation are still pending. No existing runtime has been modified by the repository changes or preflight.
