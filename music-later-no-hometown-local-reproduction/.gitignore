@@ -18,6 +18,10 @@ output/candidates/
 output/stems/
 output/repaint/
 
+# Explicit publication targets are allowed only after Owner approval.
+!output/final.wav
+!output/final.flac
+
 # Local runtime notes, logs and caches.
 .local/
 logs/
