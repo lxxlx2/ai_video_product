@@ -1,0 +1,21 @@
+{
+  "schema_version": "0.1",
+  "title": "后来没有故乡",
+  "reference_publication_state": "LOCAL_ONLY",
+  "reference_filename": "后来没有故乡.m4a",
+  "sha256": "176c81b30cbd68de6cd7c900d1513160f9a6a591eb7e9bed65d848f273c48b0e",
+  "duration_seconds": 335.84,
+  "container": "mov,mp4,m4a,3gp,3g2,mj2",
+  "audio_codec": "opus",
+  "audio_sample_rate_hz": 48000,
+  "audio_channels": 2,
+  "audio_channel_layout": "stereo",
+  "audio_bit_rate_bps": 127538,
+  "overall_bit_rate_bps": 129906,
+  "verification_source": "ffprobe on Owner-provided local reference",
+  "notes": [
+    "The source audio is intentionally excluded from the public repository.",
+    "prepare_reference.sh must verify this SHA-256 before creating the local WAV working copy.",
+    "A changed source file requires a deliberate metadata update rather than silent acceptance."
+  ]
+}
