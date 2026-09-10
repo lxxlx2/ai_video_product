@@ -10,8 +10,6 @@ The same ACE-Step runtime will later support original text/lyrics-to-song creati
 
 The target for this task is musical similarity and iterative control. Exact waveform-level duplication is not assumed.
 
-Long-term operation is Codex-led: the Owner discusses the song, reviews results and approves one exact candidate. Codex handles local model calls, candidate iteration, Git publication and cleanup. See [`docs/CODEX_ORCHESTRATION.md`](docs/CODEX_ORCHESTRATION.md).
-
 ## Runtime boundary
 
 - ACE-Step lives in its own runtime directory and environment.
@@ -59,13 +57,14 @@ cd music-later-no-hometown-local-reproduction
 bash scripts/preflight_macos.sh
 bash scripts/bootstrap_acestep_macos.sh
 bash scripts/prepare_reference.sh "/path/to/后来没有故乡.m4a"
-bash scripts/launch_acestep_macos.sh smoke
 ```
 
-The smoke profile proves the isolated runtime first. When it works, stop it with `Ctrl+C` and continue:
+The first host preflight and isolated ACE-Step bootstrap have passed. Because the Owner does not currently require coexistence with the older heavy-model stack, downloading a disposable small smoke model is optional. The next useful runtime gate is a real generation using the intended high-quality profile.
+
+Recommended next launch:
 
 ```bash
-bash scripts/launch_acestep_macos.sh repro
+bash scripts/launch_acestep_macos.sh quality
 ```
 
 Open the local Gradio UI shown by the launcher, normally:
@@ -79,23 +78,23 @@ http://127.0.0.1:8215
 Use [`docs/REPRODUCTION_RUNBOOK.md`](docs/REPRODUCTION_RUNBOOK.md):
 
 1. verify source hash and convert a local 48 kHz WAV working copy;
-2. start with the `repro` profile;
+2. start the intended generation profile;
 3. run Audio Understanding and record BPM/key/time-signature/caption;
 4. run reference-guided generation using `generated/lyrics.txt` and `generated/style.txt`;
 5. run Remix against the full local reference;
 6. generate multiple seeds and keep the closest candidate;
 7. use Repaint only for weak regions;
-8. try the `quality` profile when useful;
-9. keep parameters and hashes only while the task is active;
-10. select one final product and publish only that approved audio as the durable per-song product.
+8. preserve parameters and hashes for candidates worth keeping;
+9. select one final product and publish only that approved audio plus lightweight metadata;
+10. after remote Git/LFS verification, delete task intermediates.
 
 ## Profiles
 
 | Profile | DiT | LM | Purpose |
 |---|---|---|---|
-| `smoke` | `acestep-v15-turbo` | `acestep-5Hz-lm-0.6B` | installation/runtime proof |
-| `repro` | `acestep-v15-xl-turbo` | `acestep-5Hz-lm-1.7B` | first real reference/remix attempts |
-| `quality` | `acestep-v15-xl-sft` | `acestep-5Hz-lm-4B` | higher-quality candidate |
+| `smoke` | `acestep-v15-turbo` | `acestep-5Hz-lm-0.6B` | optional lightweight runtime proof |
+| `repro` | `acestep-v15-xl-turbo` | `acestep-5Hz-lm-1.7B` | faster real reference/remix attempts |
+| `quality` | `acestep-v15-xl-sft` | `acestep-5Hz-lm-4B` | preferred high-quality local creation/reproduction profile |
 
 ## Git audio policy
 
@@ -107,27 +106,44 @@ Preferred final master:
 output/final.wav
 ```
 
-The completed-song target is one local `final.wav` plus one Git LFS `final.wav` containing identical approved bytes. Rejected candidates, task-specific prompts/config, stems, repaint fragments, converted references, logs and caches are removed after remote verification. See [`docs/RETENTION_AND_CLEANUP.md`](docs/RETENTION_AND_CLEANUP.md).
+Optional delivery copies may also be retained as `final.flac`, `final.m4a`, or `final.mp3` when useful.
+
+Rejected candidates, stems, repaint fragments, temporary WAV conversions, logs, caches, and other working files stay local and are deleted after the final Git-backed artifact has been pushed and verified. See [`docs/RETENTION_AND_CLEANUP.md`](docs/RETENTION_AND_CLEANUP.md).
 
 ## Files
 
-- `generated/lyrics.txt`: current lyrics used during the active reproduction task.
-- `generated/style.txt`: current style/vocal prompt used during active work.
-- `config/reproduction.json`: active-task reproduction configuration.
-- `metadata/reference.json`: safe technical source record and SHA-256 during the active task.
+- `generated/lyrics.txt`: current lyrics used for local reproduction.
+- `generated/style.txt`: concise style/vocal prompt.
+- `config/reproduction.json`: pinned upstream revision, profiles, paths, source metadata, and reproduction targets.
+- `metadata/reference.json`: safe technical source record and SHA-256.
 - `metadata/preflight-2026-09-10.md`: first successful Apple Silicon preflight evidence.
+- `metadata/bootstrap-2026-09-11.md`: successful isolated ACE-Step dependency/bootstrap evidence.
 - `scripts/preflight_macos.sh`: read-only host/runtime preflight.
 - `scripts/bootstrap_acestep_macos.sh`: isolated pinned ACE-Step install.
 - `scripts/prepare_reference.sh`: source verification and local WAV preparation.
 - `scripts/launch_acestep_macos.sh`: foreground smoke/repro/quality launcher.
 - `docs/REPRODUCTION_RUNBOOK.md`: detailed step-by-step reproduction process.
-- `docs/CODEX_ORCHESTRATION.md`: target hands-off Codex orchestration architecture.
-- `docs/RETENTION_AND_CLEANUP.md`: final-only product retention and cleanup policy.
-
-Task-specific lyrics, style, configs and source metadata are working artifacts. They can be deleted from the completed task after final publication when the strict one-product-file end state is used. Shared generic workflow documentation and scripts remain repository infrastructure.
+- `docs/RETENTION_AND_CLEANUP.md`: final-artifact retention and cleanup policy.
+- `docs/CODEX_ORCHESTRATION.md`: target autonomous Codex workflow after `codex-web-bridge` is ready.
 
 ## Current status
 
-The first read-only Apple Silicon preflight passed on 2026-09-10. Verified at that point: arm64, macOS 26.6.2, git/ffmpeg/ffprobe/shasum/lsof/uv present, about 48 GiB physical memory, 72% system-wide memory free, about 511 GiB free disk space, and port 8215 available. See `metadata/preflight-2026-09-10.md`.
+Host preflight: `PASS`.
 
-ACE-Step bootstrap is currently being executed on the Owner machine. Local model generation and quality validation are still pending. No existing unrelated runtime has been modified by the repository changes or preflight.
+ACE-Step bootstrap: `PASS`.
+
+Installed isolated runtime:
+
+```text
+/Users/jerson/AI/runtime/music/acestep-1.5
+```
+
+Pinned ACE-Step commit:
+
+```text
+ca1e85fe9430179831e6bc6be790c332190a3866
+```
+
+Installed environment includes CPython 3.12.14, ACE-Step 1.5.0, MLX 0.30.6 and mlx-lm 0.29.1. Model-weight download and first successful music generation remain pending.
+
+Next step: prepare the exact approved reference audio, then launch the preferred `quality` profile and complete one real local generation.
