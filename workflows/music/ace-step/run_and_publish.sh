@@ -22,4 +22,4 @@ fi
 bash "$SCRIPT_DIR/start_api_macos.sh"
 
 cd "$REPO_ROOT"
-python3 "$SCRIPT_DIR/run_job.py" "$JOB"
+python3 "$SCRIPT_DIR/runner.py" "$JOB"
