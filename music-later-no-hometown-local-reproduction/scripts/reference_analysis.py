@@ -11,6 +11,7 @@ from pathlib import Path
 import re
 import sys
 import time
+import urllib.error
 import urllib.request
 
 
@@ -33,8 +34,12 @@ def http_json(url: str, method: str = "GET", payload: dict | None = None, timeou
         data = json.dumps(payload, ensure_ascii=False).encode("utf-8")
         headers["Content-Type"] = "application/json"
     req = urllib.request.Request(url, data=data, headers=headers, method=method)
-    with urllib.request.urlopen(req, timeout=timeout) as resp:
-        return json.loads(resp.read().decode("utf-8"))
+    try:
+        with urllib.request.urlopen(req, timeout=timeout) as resp:
+            return json.loads(resp.read().decode("utf-8"))
+    except urllib.error.HTTPError as e:
+        body = e.read().decode("utf-8", errors="replace")
+        raise RuntimeError(f"HTTP {e.code} {e.reason}: {body}") from e
 
 
 def normalize_result(item: dict) -> dict:
@@ -103,15 +108,38 @@ def main() -> int:
     print(f"sha256={actual_sha}")
     print(f"health={json.dumps(health, ensure_ascii=False)}")
 
-    submit = http_json(base_url + "/release_task", "POST", request_body, timeout=60)
-    if submit.get("code") != 200 or not isinstance(submit.get("data"), dict):
-        print(json.dumps(submit, ensure_ascii=False, indent=2))
+    health_data = health.get("data") or {}
+    expected_dit = request_body.get("model")
+    expected_lm = request_body.get("lm_model_path")
+    ready = (
+        health_data.get("models_initialized") is True
+        and health_data.get("llm_initialized") is True
+        and (not expected_dit or health_data.get("loaded_model") == expected_dit)
+        and (not expected_lm or health_data.get("loaded_lm_model") == expected_lm)
+    )
+    if not ready:
+        print("ERROR: ACE-Step API is reachable, but required models are not initialized", file=sys.stderr)
+        print(f"expected DiT: {expected_dit}", file=sys.stderr)
+        print(f"expected LM:  {expected_lm}", file=sys.stderr)
+        print(f"health: {json.dumps(health_data, ensure_ascii=False)}", file=sys.stderr)
+        print("Rerun scripts/run_reference_analysis.sh after pulling the latest start script.", file=sys.stderr)
         return 6
+
+    try:
+        submit = http_json(base_url + "/release_task", "POST", request_body, timeout=60)
+    except Exception as e:
+        print(f"ERROR: release_task failed: {e}", file=sys.stderr)
+        return 7
+
+    if submit.get("code") != 200 or not isinstance(submit.get("data"), dict):
+        print("ERROR: release_task returned an unexpected payload", file=sys.stderr)
+        print(json.dumps(submit, ensure_ascii=False, indent=2), file=sys.stderr)
+        return 8
 
     task_id = submit["data"].get("task_id")
     if not task_id:
         print("ERROR: no task_id", file=sys.stderr)
-        return 7
+        return 9
 
     print(f"task_id={task_id}")
     deadline = time.time() + args.timeout_seconds
@@ -119,12 +147,18 @@ def main() -> int:
     last_status = object()
 
     while time.time() < deadline:
-        q = http_json(
-            base_url + "/query_result",
-            "POST",
-            {"task_id_list": [task_id]},
-            timeout=30,
-        )
+        try:
+            q = http_json(
+                base_url + "/query_result",
+                "POST",
+                {"task_id_list": [task_id]},
+                timeout=30,
+            )
+        except Exception as e:
+            print(f"WARN: query_result failed temporarily: {e}", file=sys.stderr)
+            time.sleep(args.poll_seconds)
+            continue
+
         data = q.get("data") or []
         item = data[0] if data else {}
         status = item.get("status")
@@ -138,7 +172,7 @@ def main() -> int:
 
     if final_item is None:
         print("ERROR: analysis timeout", file=sys.stderr)
-        return 8
+        return 10
 
     normalized = normalize_result(final_item)
     normalized["reference"] = {
@@ -165,7 +199,7 @@ def main() -> int:
 
     if normalized.get("status") != 1:
         print(json.dumps(normalized, ensure_ascii=False, indent=2))
-        return 9
+        return 11
 
     print("REFERENCE_ANALYSIS_PASS")
     print(f"output={out_json}")
