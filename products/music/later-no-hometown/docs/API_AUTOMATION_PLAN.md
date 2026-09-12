@@ -1,514 +1,179 @@
-# ACE-Step REST Automation Plan
+# ACE-Step REST 自动化
 
-Status: PLANNED AFTER FIRST FULL MANUAL REFERENCE RUN
+状态：`IMPLEMENTED / 待本机真实验收`
 
-## Objective
+## 目标
 
-Replace routine Gradio interaction with a reproducible localhost API workflow that Codex can execute end to end.
+把 Gradio 手工配置替换成 JSON job + 固定命令，并让每轮执行自动形成 Git 审阅记录。
 
-The target user experience is:
-
-```text
-Owner describes the song or asks to reproduce a reference
--> Codex discusses lyrics and direction
--> Owner approves lyrics/direction
--> Codex performs all local execution
--> Owner listens to a small review set
--> Owner approves one exact candidate
--> Codex finalizes, pushes, verifies, and cleans up
-```
-
-Gradio is retained for debugging and exploratory manual tuning. It should not be required for normal production runs.
-
-## Why API-first
-
-Manual UI work introduces avoidable state and makes automation fragile:
+当前正式入口：
 
 ```text
-hidden checkbox state
-manual copy/paste
-manual file upload
-manual seed tracking
-manual result collection
-manual cleanup
+workflows/music/ace-step/run_and_publish.sh
 ```
 
-ACE-Step 1.5 already exposes a structured REST API with the fields required by this workflow, including model selection, prompt, lyrics, language, duration, seed, source/reference audio paths, task type, cover strength, inference steps, output format, and LM controls.
-
-For local files already present on the Mac, the API can use absolute server-local paths such as:
+正式 runner：
 
 ```text
-/Users/jerson/AI/private/music-source/later-no-hometown/后来没有故乡.reference-48k.wav
+workflows/music/ace-step/runner.py
 ```
 
-This avoids browser upload state.
-
-## Runtime topology
-
-Target process layout:
+## 当前链路
 
 ```text
-Codex Desktop / CLI
-  -> local shell or Python runner
-  -> ACE-Step REST API
-       host: 127.0.0.1
-       port: 8001
-       backend: MLX
-  -> ACE-Step model/runtime directory
-       /Users/jerson/AI/runtime/music/acestep-1.5
-  -> private work area
-       /Users/jerson/AI/private/music-source/
-       /Users/jerson/AI/work/music/
-  -> approved local product
-       /Users/jerson/AI/final/music/<song-slug>/final.wav
-  -> Git LFS product copy
-       <song-task>/output/final.wav
+next-run.json
+-> start_api_macos.sh
+-> ACE-Step localhost REST API :8001
+-> POST /release_task
+-> POST /query_result
+-> GET /v1/audio
+-> 本地 .work 原始音频
+-> ffprobe
+-> preview.mp3
+-> request / response / log / manifest
+-> git commit
+-> git push
 ```
 
-No browser automation is required.
-
-## API lifecycle
-
-ACE-Step uses an asynchronous task flow:
+## 当前人工协作模式
 
 ```text
-POST /release_task
-  -> task_id
-
-POST /query_result
-  -> status 0 while queued/running
-  -> status 1 on success
-  -> status 2 on failure
-
-GET /v1/audio?path=...
-  -> result audio when needed
+用户 + ChatGPT 确定歌词、风格、参数
+-> ChatGPT 修改 next-run.json
+-> 用户 git pull
+-> 用户执行一条命令
+-> runner 自动完成其余步骤
+-> ChatGPT 从 Git 检查日志和配置
+-> 用户试听 preview.mp3
 ```
 
-A runner should poll at a conservative interval and surface server errors verbatim.
+未来 Codex 接管后，job schema 和 runner 均保持不变，Codex 只负责自动执行命令和根据反馈修改下一轮配置。
 
-## Required scripts
+## 为什么候选使用 MP3
 
-Planned repository interface:
+默认：
 
 ```text
-scripts/
-  music_api_start.sh
-  music_api_health.sh
-  music_submit.py
-  music_poll.py
-  music_collect.py
-  music_finalize.py
-  music_cleanup.py
-  music_run.py
+本地 .work: 原始 WAV
+Git runs/: preview.mp3
 ```
 
-Responsibilities:
+这样每轮都有可听结果，同时避免大量失败 WAV 长期占用 Git LFS。
 
-### `music_api_start.sh`
-
-Start ACE-Step REST API on Apple Silicon with MLX and the intended quality profile. It must bind to localhost only and must not kill unrelated processes.
-
-Expected endpoint:
+批准某个 run 后，再把对应本地 WAV 提升到：
 
 ```text
-http://127.0.0.1:8001
+output/final.wav
 ```
 
-### `music_api_health.sh`
+## API 服务
 
-Read-only checks:
+启动：
+
+```bash
+bash workflows/music/ace-step/start_api_macos.sh
+```
+
+停止：
+
+```bash
+bash workflows/music/ace-step/stop_api_macos.sh
+```
+
+服务只绑定：
 
 ```text
-/health
-/v1/models
-port owner
-expected model availability
+127.0.0.1:8001
 ```
 
-Fail fast if another process owns the configured port.
+启动脚本默认 `--no-init`，避免先加载无关模型。具体 DiT 由 job 中的 `model` 选择。
 
-### `music_submit.py`
+如果检测到 Gradio 仍监听 8215，脚本会退出并要求人工停止 Gradio，不会自动 kill。
 
-Input: validated JSON job file.
+## Job 配置
 
-Responsibilities:
+项目当前入口：
 
 ```text
-validate job schema
-verify local reference/source file exists
-verify expected reference SHA-256 when supplied
-submit POST /release_task
-persist task_id and normalized effective parameters
+config/next-run.json
 ```
 
-### `music_poll.py`
-
-Poll `/query_result` until terminal status. It must keep the task id and raw failure message.
-
-### `music_collect.py`
-
-Resolve output audio paths, download or copy the result into the task work directory, calculate SHA-256, run technical checks, and write a candidate manifest.
-
-### `music_finalize.py`
-
-Requires explicit approval of an exact candidate hash.
-
-Responsibilities:
+模板：
 
 ```text
-recompute candidate SHA-256
-confirm it matches approved SHA-256
-copy exact bytes to canonical local final path
-copy exact bytes to repository output/final.wav
-confirm both hashes match
-commit through Git LFS
-push
-verify remote commit/object
+workflows/music/ace-step/templates/job.example.json
 ```
 
-### `music_cleanup.py`
-
-Runs only after finalization verification. Removes task-specific candidates, temporary reference conversions, generated logs, transient JSON task state, repaint fragments, and analysis caches according to retention policy.
-
-Shared ACE-Step runtime and model weights are preserved.
-
-### `music_run.py`
-
-High-level orchestrator for Codex. Expected subcommands:
+可控制的主要字段：
 
 ```text
-music_run.py validate <job.json>
-music_run.py submit <job.json>
-music_run.py status <task-id>
-music_run.py collect <task-id>
-music_run.py finalize <candidate-path> --approved-sha256 <sha>
-music_run.py cleanup <task-id>
-```
-
-Later it may provide a single bounded execution mode:
-
-```text
-music_run.py run <job.json>
-```
-
-This command must stop before final promotion and wait for Owner approval.
-
-## Job specification
-
-Jobs should be plain JSON so they can be generated, reviewed, diffed, and reproduced.
-
-Suggested reference reproduction job:
-
-```json
-{
-  "schema_version": 1,
-  "title": "后来没有故乡",
-  "slug": "later-no-hometown",
-  "task_type": "cover",
-  "model": "acestep-v15-xl-sft",
-  "lm_model_path": "acestep-5Hz-lm-4B",
-  "lm_backend": "mlx",
-  "src_audio_path": "/Users/jerson/AI/private/music-source/later-no-hometown/后来没有故乡.reference-48k.wav",
-  "src_audio_sha256": "176c81b30cbd68de6cd7c900d1513160f9a6a591eb7e9bed65d848f273c48b0e",
-  "prompt_file": "generated/style.txt",
-  "lyrics_file": "generated/lyrics.txt",
-  "thinking": false,
-  "vocal_language": "zh",
-  "audio_duration": 335.84,
-  "batch_size": 1,
-  "inference_steps": 50,
-  "infer_method": "ode",
-  "use_random_seed": true,
-  "audio_cover_strength": 0.9,
-  "cover_noise_strength": 0.2,
-  "audio_format": "wav"
-}
-```
-
-The runner should materialize file-based prompt and lyrics into the REST request. Long creative text should remain in normal text files instead of being duplicated into JSON.
-
-## Parameter policy
-
-For quality reference reproduction with `acestep-v15-xl-sft`:
-
-```text
-inference_steps: 50
-infer_method: ode
-batch_size: 1
-thinking: false for source-constrained first pass
-vocal_language: zh
-output: wav
-```
-
-Reference strength values are experiment parameters. The first controlled sweep should change one dimension at a time.
-
-Recommended first sweep after the current manual run establishes a baseline:
-
-```text
-cover_noise_strength: 0.15, 0.20, 0.25
-```
-
-If structural preservation remains weak, then adjust the Remix/cover preservation parameter separately. Do not sweep multiple dimensions simultaneously unless the previous dimension has been bounded.
-
-## Metadata policy
-
-Automatic metadata inference previously produced a `G major` plan for a prompt that requested a melancholic minor-key result. Therefore:
-
-```text
-Do not rely on LM metadata inference as the only source of truth for controlled reproduction.
-```
-
-The automation should support explicit pinned values for:
-
-```text
+model
+task_type
+prompt / prompt_file
+lyrics / lyrics_file
+thinking
+use_cot_caption
+use_cot_language
+vocal_language
 bpm
 key_scale
 time_signature
 audio_duration
-vocal_language
+inference_steps
+seed
+src_audio_path
+reference_audio_path
+audio_cover_strength
+cover_noise_strength
+audio_format
 ```
 
-If a field is intentionally left automatic, record that fact in the candidate manifest.
+## Run 输出
 
-## Candidate manifest
-
-Every candidate worth retaining for review gets a machine-readable manifest:
-
-```json
-{
-  "task_id": "...",
-  "candidate_id": "...",
-  "created_at": "...",
-  "model": "acestep-v15-xl-sft",
-  "seed": 123456,
-  "params": {},
-  "source_sha256": "...",
-  "output_sha256": "...",
-  "duration_seconds": 335.84,
-  "technical_checks": {},
-  "review_state": "pending"
-}
-```
-
-Only the manifest for actively reviewed candidates must survive during a task. After final publication, durable metadata should be minimized to what is useful for reproducibility and audit.
-
-## Technical checks
-
-Before presenting a candidate, automate inexpensive deterministic checks:
+每轮 Git 记录：
 
 ```text
-file exists and nonzero
-ffprobe succeeds
-duration within configured tolerance
-sample rate and channels readable
-no all-silence output
-peak is finite
-SHA-256 recorded
-source/reference hash still matches
-API task ended with success
+runs/<run-id>/
+  request.json
+  release-response.json
+  final-response.json
+  run.log
+  manifest.json
+  ffprobe.json
+  preview.mp3
 ```
 
-Optional later checks:
+原始结果：
 
 ```text
-lyrics transcription coverage
-clipping ratio
-long silence anomalies
-section timing comparison
-reference similarity metrics
+<repo>/.work/products/music/later-no-hometown/<run-id>/result.wav
 ```
 
-Subjective musical quality remains an Owner decision.
+## 验收 Gate
 
-## Candidate strategy
-
-Avoid uncontrolled batch explosion.
-
-Default production loop:
+当前实现尚未在本机真实执行，因此以下项目仍待验证：
 
 ```text
-1 baseline candidate
--> review
--> one controlled parameter change if needed
--> review
--> once a good parameter region is found, test a small seed set
--> keep at most 2 or 3 serious review candidates
--> use repaint for local defects
+G1 start_api_macos.sh 成功启动 8001
+G2 /health 可用
+G3 /release_task 接受 job
+G4 /query_result 能正确轮询
+G5 /v1/audio 能下载真实结果
+G6 ffmpeg 能生成 preview.mp3
+G7 runs/<run-id> 文件完整
+G8 git commit + push 成功
+G9 ChatGPT 能从 Git 读取该 run 文本记录
 ```
 
-This reduces storage, compute, and review fatigue.
+首轮只验证链路，不把音乐质量作为通过条件。
 
-## Original song mode
+## 后续增强
 
-The same runner must support fully original text-to-music creation.
+链路通过后再加入：
 
-Example path:
-
-```text
-Owner concept
--> Codex drafts lyrics and style
--> Owner approves or requests edits
--> task_type=text2music
--> Codex submits controlled candidates
--> Owner reviews
--> finalization gate
-```
-
-Original song creation may use `thinking=true` where the 5Hz LM's composition planning is helpful. The runner must record the LM-generated metadata and effective parameters so successful ideas can be reproduced.
-
-## Reference mode
-
-For reproduction:
-
-```text
-source/reference audio drives structure
-thinking defaults off for the first controlled pass
-explicit lyrics and prompt are supplied
-strength and seed sweeps are bounded
-repaint is preferred over whole-song regeneration when only a local region is bad
-```
-
-## Codex integration boundary
-
-`codex-web-bridge` should not contain ACE-Step-specific generation logic.
-
-After standalone bridge readiness, Codex only needs ordinary local tool access to:
-
-```text
-read/write the song task repository
-execute the runner
-inspect manifests and logs
-play or surface output paths for Owner review
-run Git operations
-```
-
-The music API remains an independent localhost service.
-
-## Approval contract
-
-No script may automatically publish a final candidate based only on a score.
-
-Finalization requires an Owner-approved exact SHA-256. If bytes change after approval, finalization must fail and require a new approval.
-
-## Retention contract
-
-Long-term durable assets per completed song:
-
-```text
-local approved audio:
-/Users/jerson/AI/final/music/<song-slug>/final.wav
-
-Git approved audio:
-<song-task>/output/final.wav
-
-lightweight documentation and reproducibility metadata as needed
-```
-
-Delete after verified publication:
-
-```text
-rejected candidates
-temporary WAV conversions
-stems not explicitly retained
-repaint fragments
-job runtime files
-task logs
-analysis caches
-browser/Gradio exports
-```
-
-Keep shared capability assets:
-
-```text
-ACE-Step runtime
-model weights
-generic scripts
-documentation
-```
-
-## Implementation phases
-
-### Phase A: finish manual truth-finding
-
-Current phase.
-
-Acceptance:
-
-```text
-one full 5:36 Remix/Cover candidate completes
-Owner evaluates actual similarity and failure modes
-exact effective parameters are recorded
-```
-
-### Phase B: REST parity
-
-Implement API launcher and runner. Reproduce the same manual settings through REST and confirm output generation works without opening Gradio.
-
-Acceptance:
-
-```text
-health check passes
-job submission works
-polling works
-WAV collection works
-same quality model is used
-reference hash is verified
-```
-
-### Phase C: bounded candidate automation
-
-Add parameter sweeps, technical checks, candidate manifests, and review set preparation.
-
-Acceptance:
-
-```text
-Codex can generate a small bounded candidate set without UI interaction
-all candidates are attributable to exact parameters and hashes
-```
-
-### Phase D: approval-bound publication
-
-Add finalization, Git LFS push, remote verification, and cleanup.
-
-Acceptance:
-
-```text
-Owner approval references exact SHA-256
-local final and Git final bytes match
-remote Git/LFS object verified
-intermediates removed only after verification
-```
-
-### Phase E: Codex full orchestration
-
-After `codex-web-bridge` release readiness, Codex owns the operational loop. Owner interaction is limited to creative discussion and approval.
-
-## Failure policy
-
-The runner must fail closed on:
-
-```text
-reference hash mismatch
-missing source file
-wrong model unavailable
-API unhealthy
-unexpected port owner
-output missing
-invalid audio
-candidate hash changed after approval
-Git/LFS verification failure
-```
-
-It must not kill unrelated processes, delete model assets, or silently fall back to cloud/paid services.
-
-## Next implementation task
-
-After the current manual full-song run finishes and its result is reviewed:
-
-```text
-implement music_api_start.sh
-implement music_api_health.sh
-implement music_run.py validate/submit/status/collect
-add one checked-in example job for later-no-hometown
-prove REST parity with one full reference candidate
-```
+1. `promote_run.py`：把用户批准的 run 提升为 final；
+2. 自动技术检查：静音、削波、时长、文件有效性；
+3. seed / cover strength 有界扫描；
+4. run 之间的 parent_run_id 对比；
+5. Codex 自动执行；
+6. 最终产物远端 LFS 校验与 `.work` 清理。
