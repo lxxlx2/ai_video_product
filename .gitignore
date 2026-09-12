@@ -1,0 +1,8 @@
+.work/
+.DS_Store
+*.tmp
+*.partial
+__pycache__/
+*.pyc
+.env
+.env.*
