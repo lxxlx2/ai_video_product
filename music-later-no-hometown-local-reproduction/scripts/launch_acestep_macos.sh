@@ -5,6 +5,7 @@ PROFILE="${1:-smoke}"
 RUNTIME_ROOT="${ACE_RUNTIME_ROOT:-$HOME/AI/runtime/music/acestep-1.5}"
 HOST="${ACESTEP_HOST:-127.0.0.1}"
 PORT="${ACESTEP_UI_PORT:-8215}"
+DOWNLOAD_SOURCE="${ACESTEP_DOWNLOAD_SOURCE:-huggingface}"
 
 case "$PROFILE" in
   smoke)
@@ -22,6 +23,14 @@ case "$PROFILE" in
   *)
     echo "usage: $0 {smoke|repro|quality}" >&2
     exit 64
+    ;;
+esac
+
+case "$DOWNLOAD_SOURCE" in
+  huggingface|modelscope) ;;
+  *)
+    echo "ERROR: ACESTEP_DOWNLOAD_SOURCE must be huggingface or modelscope." >&2
+    exit 65
     ;;
 esac
 
@@ -48,9 +57,7 @@ fi
 if [[ "$PROFILE" == "quality" ]]; then
   cat <<'WARN'
 WARNING: quality profile is the heaviest profile.
-Keep normal applications open. If memory pressure or swap growth becomes unacceptable,
-stop ACE-Step with Ctrl+C and record the result as resource-blocked. Do not close user apps
-to manufacture a PASS.
+If memory pressure or swap growth becomes unacceptable, stop ACE-Step with Ctrl+C.
 WARN
 fi
 
@@ -60,6 +67,7 @@ export TOKENIZERS_PARALLELISM="false"
 printf 'profile: %s\n' "$PROFILE"
 printf 'DiT:     %s\n' "$DIT"
 printf 'LM:      %s\n' "$LM"
+printf 'source:  %s\n' "$DOWNLOAD_SOURCE"
 printf 'UI:      http://%s:%s\n' "$HOST" "$PORT"
 printf 'mode:    foreground; Ctrl+C stops only this ACE-Step process\n\n'
 
@@ -71,6 +79,6 @@ exec uv run acestep \
   --config_path "$DIT" \
   --lm_model_path "$LM" \
   --backend mlx \
-  --download-source huggingface \
+  --download-source "$DOWNLOAD_SOURCE" \
   --init_service true \
   --batch_size 1
