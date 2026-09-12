@@ -9,6 +9,7 @@ import os
 from pathlib import Path
 import shutil
 import subprocess
+import sys
 import time
 import urllib.parse
 import urllib.request
@@ -62,9 +63,7 @@ def redact(value: Any, repo_root: Path) -> Any:
     if isinstance(value, str):
         home = str(Path.home())
         repo = str(repo_root)
-        value = value.replace(repo, "<repo>")
-        value = value.replace(home, "~")
-        return value
+        return value.replace(repo, "<repo>").replace(home, "~")
     return value
 
 
