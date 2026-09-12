@@ -13,7 +13,7 @@ if [[ "$CURRENT_BRANCH" != "$EXPECTED_BRANCH" ]]; then
   exit 2
 fi
 
-# Avoid silently running from an old checkout. Unrelated dirty files are allowed.
+# 允许存在与本任务无关的本地脏文件，但要求当前分支代码与远端一致。
 git -C "$REPO_ROOT" fetch origin "$EXPECTED_BRANCH" --quiet
 LOCAL_SHA="$(git -C "$REPO_ROOT" rev-parse HEAD)"
 REMOTE_SHA="$(git -C "$REPO_ROOT" rev-parse "origin/$EXPECTED_BRANCH")"
@@ -25,21 +25,30 @@ fi
 
 bash "$SCRIPT_DIR/start_music_api_macos.sh"
 
+set +e
 python3 "$SCRIPT_DIR/music_job.py" "$JOB_FILE"
+JOB_RC=$?
+set -e
 
 REVIEW_DIR="$TASK_DIR/review/latest"
-if [[ ! -f "$REVIEW_DIR/run.json" || ! -f "$REVIEW_DIR/review.mp3" ]]; then
-  echo "ERROR: expected review snapshot is missing"
-  exit 4
+if [[ ! -f "$REVIEW_DIR/run.json" ]]; then
+  echo "ERROR: music_job.py exited with code $JOB_RC and no review/run.json was produced."
+  exit "$JOB_RC"
 fi
 
-RUN_ID="$(python3 - <<'PY' "$REVIEW_DIR/run.json"
+RUN_ID="$(python3 - "$REVIEW_DIR/run.json" <<'PY'
 import json, sys
 print(json.load(open(sys.argv[1], encoding='utf-8'))['run_id'])
 PY
 )"
 
-REL_REVIEW="$(python3 - <<'PY' "$REPO_ROOT" "$REVIEW_DIR"
+STATUS="$(python3 - "$REVIEW_DIR/run.json" <<'PY'
+import json, sys
+print(json.load(open(sys.argv[1], encoding='utf-8')).get('status', 'unknown'))
+PY
+)"
+
+REL_REVIEW="$(python3 - "$REPO_ROOT" "$REVIEW_DIR" <<'PY'
 from pathlib import Path
 import sys
 print(Path(sys.argv[2]).resolve().relative_to(Path(sys.argv[1]).resolve()))
@@ -47,8 +56,9 @@ PY
 )"
 
 echo
- echo "===== REVIEW SNAPSHOT ====="
+echo "===== REVIEW SNAPSHOT ====="
 echo "run_id: $RUN_ID"
+echo "status: $STATUS"
 echo "path:   $REL_REVIEW"
 
 git -C "$REPO_ROOT" add -- "$REL_REVIEW"
@@ -56,7 +66,7 @@ git -C "$REPO_ROOT" add -- "$REL_REVIEW"
 if git -C "$REPO_ROOT" diff --cached --quiet -- "$REL_REVIEW"; then
   echo "No review changes to commit."
 else
-  git -C "$REPO_ROOT" commit --only -m "review(music): $RUN_ID" -- "$REL_REVIEW"
+  git -C "$REPO_ROOT" commit --only -m "review(music): $RUN_ID $STATUS" -- "$REL_REVIEW"
   git -C "$REPO_ROOT" push origin "$EXPECTED_BRANCH"
 fi
 
@@ -64,6 +74,12 @@ echo
 echo "MUSIC_REVIEW_PUBLISHED"
 echo "branch: $EXPECTED_BRANCH"
 echo "run_id:  $RUN_ID"
+echo "status:  $STATUS"
 echo "review:  $REL_REVIEW"
 echo
 echo "Next: tell ChatGPT/Codex that the run is finished so it can inspect review/latest from Git."
+
+if [[ "$JOB_RC" -ne 0 ]]; then
+  echo "Generation/collection failed with exit code $JOB_RC, but the available review logs were published."
+  exit "$JOB_RC"
+fi
