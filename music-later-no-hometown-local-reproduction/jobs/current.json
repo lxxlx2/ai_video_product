@@ -1,0 +1,52 @@
+{
+  "job_version": 2,
+  "task_slug": "later-no-hometown",
+  "task_dir": "..",
+  "ready_to_run": false,
+  "notes": "当前完整 Remix 结果质量未达要求。下一轮参数需要先由用户与 ChatGPT 确认，确认后再把 ready_to_run 改为 true。",
+  "required_decisions": [
+    "下一轮采用 cover、reference-guided text2music 或其他路线",
+    "参考音频分析得到的 BPM",
+    "参考音频分析得到的 key_scale",
+    "audio_cover_strength",
+    "cover_noise_strength",
+    "是否继续使用完整 335.84 秒参考，或先用短片段做旋律/音色验证"
+  ],
+  "api": {
+    "base_url": "http://127.0.0.1:8001",
+    "server_log": "~/AI/logs/music/acestep-api.log"
+  },
+  "private_run_root": "~/AI/private/music-runs",
+  "prompt_file": "../generated/style.txt",
+  "lyrics_file": "../generated/lyrics.txt",
+  "reference_sha256": "288edd5197a7535d9dadfac27dc1aea469999e16dc6dfeaf1291cc882afd6775",
+  "reference_kind": "working_wav",
+  "request": {
+    "model": "acestep-v15-xl-sft",
+    "lm_model_path": "acestep-5Hz-lm-4B",
+    "lm_backend": "mlx",
+    "task_type": "cover",
+    "src_audio_path": "/Users/jerson/AI/private/music-source/later-no-hometown/后来没有故乡.reference-48k.wav",
+    "thinking": false,
+    "use_cot_caption": false,
+    "use_cot_language": false,
+    "vocal_language": "zh",
+    "audio_duration": 335.84,
+    "batch_size": 1,
+    "inference_steps": 50,
+    "guidance_scale": 7.0,
+    "infer_method": "ode",
+    "shift": 3.0,
+    "use_random_seed": true,
+    "seed": -1,
+    "audio_cover_strength": 1.0,
+    "cover_noise_strength": 0.2,
+    "audio_format": "wav",
+    "use_tiled_decode": true,
+    "dcw_enabled": false
+  },
+  "review": {
+    "directory": "review/latest",
+    "mp3_bitrate": "256k"
+  }
+}

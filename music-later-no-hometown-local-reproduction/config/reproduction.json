@@ -1,0 +1,68 @@
+{
+  "schema_version": "0.1",
+  "task": "music-later-no-hometown-local-reproduction",
+  "status": "WORKFLOW_READY_NOT_LOCALLY_QUALIFIED",
+  "upstream": {
+    "repo": "https://github.com/ACE-Step/ACE-Step-1.5.git",
+    "pinned_commit": "ca1e85fe9430179831e6bc6be790c332190a3866",
+    "backend": "mlx"
+  },
+  "reference": {
+    "filename": "后来没有故乡.m4a",
+    "sha256": "176c81b30cbd68de6cd7c900d1513160f9a6a591eb7e9bed65d848f273c48b0e",
+    "duration_seconds": 335.84,
+    "sample_rate_hz": 48000,
+    "channels": 2,
+    "codec": "opus",
+    "container": "m4a",
+    "source_visibility": "LOCAL_ONLY"
+  },
+  "runtime": {
+    "checkout_root": "~/AI/runtime/music/acestep-1.5",
+    "private_source_root": "~/AI/private/music-source/later-no-hometown",
+    "output_root": "~/AI/runtime/music/output/later-no-hometown",
+    "host": "127.0.0.1",
+    "ui_port": 8215,
+    "background_daemon": false
+  },
+  "profiles": {
+    "smoke": {
+      "dit": "acestep-v15-turbo",
+      "lm": "acestep-5Hz-lm-0.6B",
+      "purpose": "installation and MLX runtime proof"
+    },
+    "repro": {
+      "dit": "acestep-v15-xl-turbo",
+      "lm": "acestep-5Hz-lm-1.7B",
+      "purpose": "reference-guided and cover iteration"
+    },
+    "quality": {
+      "dit": "acestep-v15-xl-sft",
+      "lm": "acestep-5Hz-lm-4B",
+      "purpose": "higher-quality final candidate after resource evidence"
+    }
+  },
+  "reproduction_targets": {
+    "primary_mode_order": [
+      "audio_understanding",
+      "reference_guided",
+      "cover",
+      "multi_seed_selection",
+      "repaint"
+    ],
+    "target_duration_seconds": 335.84,
+    "target_bpm_hint": 68,
+    "target_key": "AUTO_FROM_REFERENCE",
+    "preserve_lyrics": true,
+    "preserve_song_structure": true,
+    "preserve_young_tired_male_vocal_character": true,
+    "exact_waveform_duplication_required": false
+  },
+  "safety": {
+    "close_user_apps": false,
+    "kill_unrelated_processes": false,
+    "silent_cloud_fallback": false,
+    "public_reference_audio": false,
+    "publish_generated_master_without_owner_approval": false
+  }
+}
