@@ -23,7 +23,7 @@ health_ok() {
 models_ready() {
   local body
   body="$(health_json)" || return 1
-  printf '%s' "$body" | python3 - "$DIT_MODEL" "$LM_MODEL" <<'PY'
+  python3 -c '
 import json, sys
 expected_dit, expected_lm = sys.argv[1:3]
 try:
@@ -38,7 +38,7 @@ ok = (
     and data.get("loaded_lm_model") == expected_lm
 )
 raise SystemExit(0 if ok else 1)
-PY
+' "$DIT_MODEL" "$LM_MODEL" <<<"$body"
 }
 
 print_health() {
