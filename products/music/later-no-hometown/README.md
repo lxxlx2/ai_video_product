@@ -1,92 +1,48 @@
-# 后来没有故乡 · Local Reproduction
+# 《后来没有故乡》本地音乐项目
 
-This task records a reproducible local workflow for rebuilding the approved reference song with ACE-Step 1.5 on Apple Silicon, and serves as the first concrete local music-generation workflow for future original songs.
+这个目录用于《后来没有故乡》的本地生成、参考复现、参数实验和最终产物归档。
 
-## Goal
+当前目标有两层：
 
-Start from the Owner-selected Suno reference file and produce a close local reproduction with controllable lyrics, structure, vocal character, arrangement, seeds, and local repaint/edit passes.
+1. 尽可能复现已经满意的 Suno 版本，用它验证本地参考音频工作流；
+2. 把整个流程抽象成通用能力，后续可以只通过歌词和风格描述在本地创作新歌。
 
-The same ACE-Step runtime will later support original text/lyrics-to-song creation without requiring a Suno reference.
+## 当前结论
 
-The target for this task is musical similarity and iterative control. Exact waveform-level duplication is not assumed.
-
-## Current status
-
-As of 2026-09-12:
+截至 2026-09-12：
 
 ```text
-Host preflight                         PASS
-ACE-Step bootstrap                    PASS
-Reference verification/conversion     PASS
-Quality model download                PASS
-XL SFT load on MLX                    PASS
-4B LM load on MLX                     PASS
-30 s local generation                 PASS
-Model/cache cleanup                   PASS
-First full 5:36 Remix/Cover run       IN PROGRESS
-REST API automation                   PLANNED NEXT
-Codex full orchestration              BLOCKED ON BRIDGE READINESS
+Mac / Apple Silicon 预检                 PASS
+ACE-Step 1.5 独立运行时                  PASS
+XL SFT 模型下载与校验                    PASS
+4B LM 下载与校验                         PASS
+MLX DiT                                  PASS
+MLX VAE                                  PASS
+30 秒本地生成                            PASS
+下载缓存和残片清理                       PASS
+第一次 30 秒 Custom 听感                 REJECTED
+第一次完整 5:36 Remix/Cover 听感         REJECTED
+命令行 REST 自动化                       IMPLEMENTED / 待本机验收
+Git run 审阅协议                          IMPLEMENTED / 待本机验收
 ```
 
-The quality runtime is fully installed and has already generated local audio successfully.
+两个生成结果在技术上都完成了，但音乐听感无法接受，因此它们只证明运行时可用，没有证明 ACE-Step 当前参数已经达到目标质量。
 
-The current manual full-song Remix is intentionally being allowed to finish before API automation work changes the execution surface. Detailed evidence and decisions are recorded in [`docs/PROGRESS_2026-09-12.md`](docs/PROGRESS_2026-09-12.md).
+## 当前技术栈
 
-## Runtime boundary
-
-- ACE-Step lives in its own runtime directory and environment.
-- The service binds to localhost only.
-- The reference M4A, derived WAV, stems, model weights, caches, and unapproved output audio stay local during work.
-- Scripts never kill unrelated processes or modify unrelated runtimes.
-- No paid/cloud fallback is enabled.
-- Current execution does not require simultaneous coexistence with older heavy-model stacks.
-- Gradio is a debugging/manual tuning surface. The intended production surface is the localhost REST API.
-
-Architecture record: `lxxlx2/local-ai-platform/docs/architecture/ADR-0007-local-music-generation-and-reference-reproduction.md` on branch `feat/local-music-reproduction-v01`.
-
-## Reference
-
-Expected local source filename:
+运行时：
 
 ```text
-后来没有故乡.m4a
+~/AI/runtime/music/acestep-1.5
 ```
 
-Verified technical metadata for the selected reference:
-
-```text
-duration: 335.840 s
-container: M4A/MP4
-codec: Opus
-sample rate: 48000 Hz
-channels: stereo
-audio bitrate: about 127.5 kbps
-sha256: 176c81b30cbd68de6cd7c900d1513160f9a6a591eb7e9bed65d848f273c48b0e
-```
-
-Prepared local working reference:
-
-```text
-/Users/jerson/AI/private/music-source/later-no-hometown/后来没有故乡.reference-48k.wav
-```
-
-The reference audio itself is intentionally not committed to the repository.
-
-## Installed quality runtime
-
-Runtime path:
-
-```text
-/Users/jerson/AI/runtime/music/acestep-1.5
-```
-
-Pinned ACE-Step commit:
+固定上游 commit：
 
 ```text
 ca1e85fe9430179831e6bc6be790c332190a3866
 ```
 
-Quality profile:
+当前质量模型：
 
 ```text
 DiT: acestep-v15-xl-sft
@@ -94,207 +50,154 @@ LM:  acestep-5Hz-lm-4B
 backend: MLX
 ```
 
-The service successfully reached:
+模型安装后正式 checkpoint 总量约 36G。
+
+## 参考歌曲
+
+原始参考音频只保存在本机私有目录，不上传 Git。
+
+已确认源信息：
 
 ```text
-MLX model loaded successfully
-5Hz LM initialized successfully
-Service initialization completed successfully
+文件名: 后来没有故乡.m4a
+时长: 335.840 秒
+采样率: 48000 Hz
+声道: stereo
+codec: Opus
+sha256: 176c81b30cbd68de6cd7c900d1513160f9a6a591eb7e9bed65d848f273c48b0e
 ```
 
-Validated checkpoint footprint after stale partial-download cleanup:
+本地工作参考：
 
 ```text
-19G   acestep-v15-xl-sft
-7.9G  acestep-5Hz-lm-4B
-4.5G  acestep-v15-turbo
-3.5G  acestep-5Hz-lm-1.7B
-1.1G  Qwen3-Embedding-0.6B
-337M  vae
-36G   total checkpoints
+~/AI/private/music-source/later-no-hometown/后来没有故乡.reference-48k.wav
 ```
 
-The smaller Turbo and 1.7B assets are currently retained because upstream startup checks may request them. Removing them is a later optimization after API startup behavior is fully qualified.
+## 已确认的问题
 
-## First local generation result
+### 30 秒 Custom
 
-A 30 second Custom generation completed successfully on MLX. The stack proved end-to-end execution through LM, DiT, VAE, and audio output.
+模型成功生成了中文歌曲，但自动 LM 规划把带有 `minor key` 的描述规划成了 `G major`，并且人声旋律、音准和整体听感都不符合要求。
 
-The musical result was rejected. The most important diagnostic finding was that automatic LM metadata planning selected `G major` even though the caption requested a melancholic minor-key direction.
-
-Decision:
+因此后续受控实验默认：
 
 ```text
-Reference reproduction should use source audio as the main structural constraint.
-Thinking should default off for the first controlled Remix/Cover pass.
-Metadata should be pinned explicitly when automatic inference conflicts with the intended result.
+thinking: false
+use_cot_caption: false
+use_cot_language: false
 ```
 
-See [`docs/PROGRESS_2026-09-12.md`](docs/PROGRESS_2026-09-12.md).
+需要自动规划时再单独开启。
 
-## Current manual reproduction pass
+### 完整 Remix/Cover
 
-The first full 5:36 reference-guided Remix is running manually in Gradio to establish a trustworthy baseline before automation.
+第一次完整 5:36 参考复现也被人工试听否决。
 
-Current intent:
+这说明“模型能接收参考音频”与“可以高质量复刻目标歌曲”是两个不同验收项。后续继续实验时必须保存每一轮真实参数和结果，避免通过 UI 猜测状态。
+
+## 新的工作方式
+
+从现在开始，正常实验不再依赖 Gradio 手工填写。
+
+固定流程：
 
 ```text
-mode: Remix
-source: approved reference WAV
-model: acestep-v15-xl-sft
-thinking: off
-language: zh
-batch: 1
-steps: 50
-method: ode
-sampler: euler
-full-song duration
+ChatGPT 与用户讨论本轮参数
+        ↓
+更新 config/next-run.json
+        ↓
+用户执行一条命令
+        ↓
+ACE-Step REST API 本地生成
+        ↓
+runner 保存原始结果到 .work
+        ↓
+runner 生成 preview.mp3
+        ↓
+runner 保存 request / response / log / manifest
+        ↓
+自动 Git commit + push
+        ↓
+ChatGPT 从 Git 检查日志和配置
+用户试听 preview.mp3
+        ↓
+决定下一轮参数
 ```
 
-The Gradio progress ETA is treated as advisory only. Long full-song XL SFT generation can exceed the initial estimate.
+未来 Codex 接管以后，仍然执行相同 runner，只把人工执行命令替换成 Codex 本地工具调用。
 
-Once this candidate finishes, its actual audio quality and effective parameters will define the first REST parity target.
-
-## Production direction: API-first
-
-Normal future use should not require manual Gradio setup.
-
-ACE-Step already exposes a localhost asynchronous REST workflow:
+通用脚本位于：
 
 ```text
-POST /release_task
--> task_id
-
-POST /query_result
--> queued/running/succeeded/failed
-
-GET /v1/audio?path=...
--> result audio when needed
+workflows/music/ace-step/
 ```
 
-The planned automation is documented in [`docs/API_AUTOMATION_PLAN.md`](docs/API_AUTOMATION_PLAN.md).
-
-Target steady-state workflow:
+仓库级协议：
 
 ```text
-Owner request
--> Codex discusses lyrics/direction
--> Codex writes lyrics/style/job spec
--> Codex starts or verifies ACE-Step REST API
--> Codex submits/polls/collects candidates
--> Codex performs technical checks
--> Owner reviews a small bounded candidate set
--> Owner approves one exact candidate
--> Codex finalizes identical local + Git copies
--> Git LFS push and remote verification
--> Codex deletes task intermediates
+docs/RUN_REVIEW_PROTOCOL.md
+docs/REPOSITORY_STRUCTURE.md
 ```
 
-The Owner should only need to participate in creative discussion and final approval.
-
-## First deployment commands
-
-From the confirmed local repository path:
-
-```bash
-cd /Users/jerson/ai_video_product
-git fetch origin
-git switch feat/local-music-reproduction-v01
-git pull --ff-only
-
-cd music-later-no-hometown-local-reproduction
-bash scripts/preflight_macos.sh
-bash scripts/bootstrap_acestep_macos.sh
-bash scripts/prepare_reference.sh "/path/to/后来没有故乡.m4a"
-bash scripts/launch_acestep_macos.sh quality
-```
-
-Gradio manual validation endpoint:
+## 项目目录
 
 ```text
-http://127.0.0.1:8215
+products/music/later-no-hometown/
+├── README.md
+├── source/             参考音频说明，不含私有原音频
+├── generated/          当前歌词和 style
+├── config/             项目配置和 next-run.json
+├── runs/               每轮 Git 审阅记录
+├── output/             最终批准产物
+├── metadata/           长期技术记录
+└── docs/               历史 runbook、进度和决策
 ```
 
-Future REST production endpoint is expected to use:
+## 每轮 Run
+
+每次 API 生成后，Git 中出现：
 
 ```text
-http://127.0.0.1:8001
+runs/<run-id>/
+├── request.json
+├── release-response.json
+├── final-response.json
+├── run.log
+├── manifest.json
+├── ffprobe.json
+└── preview.mp3
 ```
 
-## Reproduction sequence
+原始 WAV 默认保存在：
 
-Use [`docs/REPRODUCTION_RUNBOOK.md`](docs/REPRODUCTION_RUNBOOK.md) for the manual baseline process.
+```text
+<repo>/.work/products/music/later-no-hometown/<run-id>/result.wav
+```
 
-High-level sequence:
+这样 Git 可以保存所有可审阅的实验记录，又不会因为每轮上传大型 WAV 快速消耗 LFS。
 
-1. verify source hash and prepare the 48 kHz working WAV;
-2. start the intended quality profile;
-3. establish one valid reference-guided full-song baseline;
-4. record exact parameters and output hash;
-5. adjust one strength dimension at a time;
-6. choose a promising seed/parameter region;
-7. use Repaint only for localized defects;
-8. present a small bounded review set;
-9. bind Owner approval to an exact candidate SHA-256;
-10. publish only the approved final artifact and lightweight metadata;
-11. verify Git/LFS remotely;
-12. delete task intermediates.
+## 最终产物
 
-## Profiles
-
-| Profile | DiT | LM | Purpose |
-|---|---|---|---|
-| `smoke` | `acestep-v15-turbo` | `acestep-5Hz-lm-0.6B` | optional lightweight runtime proof |
-| `repro` | `acestep-v15-xl-turbo` | `acestep-5Hz-lm-1.7B` | faster reference/remix attempts |
-| `quality` | `acestep-v15-xl-sft` | `acestep-5Hz-lm-4B` | preferred high-quality local creation/reproduction profile |
-
-Current work uses `quality`.
-
-## Git audio policy
-
-Git can store the final approved audio. This repository tracks approved audio through Git LFS for WAV, FLAC, M4A, MP3, AAC, and OGG.
-
-Preferred final master:
+只有用户明确批准的 run 才提升为：
 
 ```text
 output/final.wav
 ```
 
-Optional delivery copies may also be retained when useful.
+批准必须绑定具体 run-id 和 SHA-256。
 
-Rejected candidates, stems, repaint fragments, temporary WAV conversions, logs, caches, and other working files stay local and are deleted after the final Git-backed artifact has been pushed and verified. See [`docs/RETENTION_AND_CLEANUP.md`](docs/RETENTION_AND_CLEANUP.md).
+## 当前下一步
 
-## Files
-
-- `generated/lyrics.txt`: current lyrics used for local reproduction.
-- `generated/style.txt`: concise style/vocal prompt.
-- `config/reproduction.json`: pinned upstream revision, profiles, paths, source metadata, and reproduction targets.
-- `metadata/reference.json`: safe technical source record and SHA-256.
-- `metadata/preflight-2026-09-10.md`: first successful Apple Silicon preflight evidence.
-- `metadata/bootstrap-2026-09-11.md`: isolated ACE-Step dependency/bootstrap evidence.
-- `metadata/model-install-2026-09-12.md`: quality-model install and runtime evidence.
-- `docs/PROGRESS_2026-09-12.md`: current runtime, validation, diagnosis, manual run, and acceptance gates.
-- `docs/API_AUTOMATION_PLAN.md`: planned REST runner, job contract, candidate loop, finalization, and cleanup architecture.
-- `docs/REPRODUCTION_RUNBOOK.md`: manual reference-reproduction process.
-- `docs/RETENTION_AND_CLEANUP.md`: final-artifact retention and cleanup policy.
-- `docs/CODEX_ORCHESTRATION.md`: target Codex-led workflow after bridge readiness.
-- `scripts/preflight_macos.sh`: read-only host/runtime preflight.
-- `scripts/bootstrap_acestep_macos.sh`: isolated pinned ACE-Step install.
-- `scripts/prepare_reference.sh`: source verification and local WAV preparation.
-- `scripts/launch_acestep_macos.sh`: foreground smoke/repro/quality Gradio launcher.
-
-## Next implementation milestone
-
-Do not interrupt the currently running full Remix merely to switch execution surfaces.
-
-After it completes and the Owner reviews the actual audio:
+先验证新的命令行链路本身：
 
 ```text
-1. record the exact baseline candidate and SHA-256
-2. implement localhost REST launcher and health checks
-3. implement structured job submission/poll/collect runner
-4. reproduce the manual baseline through REST
-5. add bounded candidate sweeps and manifests
-6. add approval-bound finalization and Git LFS verification
-7. connect Codex after codex-web-bridge standalone readiness
+1. 切换到 feat/product-layout-v04
+2. 停止当前 Gradio
+3. 启动或自动启动 127.0.0.1:8001 REST API
+4. 执行 config/next-run.json
+5. 确认 runs/<run-id>/ 自动生成并 push
+6. ChatGPT 从 Git 检查日志
+7. 用户试听 preview.mp3
 ```
+
+命令行链路验证通过后，再继续做参数搜索。这样后面的每一次失败都有可比较的证据。
