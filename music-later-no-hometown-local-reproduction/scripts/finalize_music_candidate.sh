@@ -22,18 +22,17 @@ if [[ ! -f "$RUN_JSON" ]]; then
   exit 3
 fi
 
-readarray -t VALUES < <(python3 - "$RUN_JSON" <<'PY'
+IFS=$'\t' read -r STATUS CANDIDATE RECORDED_SHA < <(python3 - "$RUN_JSON" <<'PY'
 import json, sys
 r = json.load(open(sys.argv[1], encoding='utf-8'))
-print(r.get('status') or '')
-print(r.get('candidate_local_path') or '')
-print(r.get('candidate_sha256') or '')
+vals = [
+    r.get('status') or '',
+    r.get('candidate_local_path') or '',
+    r.get('candidate_sha256') or '',
+]
+print('\t'.join(vals))
 PY
 )
-
-STATUS="${VALUES[0]}"
-CANDIDATE="${VALUES[1]}"
-RECORDED_SHA="${VALUES[2]}"
 
 if [[ "$STATUS" != "succeeded" ]]; then
   echo "ERROR: run status is $STATUS"
@@ -90,7 +89,7 @@ git -C "$REPO_ROOT" commit --only -m "publish(music): approve later-no-hometown 
 git -C "$REPO_ROOT" push origin "$BRANCH"
 
 echo
- echo "FINAL_MUSIC_PUBLISHED"
+echo "FINAL_MUSIC_PUBLISHED"
 echo "run_id: $RUN_ID"
 echo "sha256: $EXPECTED_SHA"
 echo "path:   $REL_FINAL"
