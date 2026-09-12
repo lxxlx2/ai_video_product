@@ -1,0 +1,35 @@
+{
+  "schema_version": 1,
+  "title": "后来没有故乡-命令行链路验收",
+  "purpose": "只验证 REST runner、日志、试听文件和 Git 自动发布链路，不评价音乐质量",
+  "api_base": "http://127.0.0.1:8001",
+  "timeout_seconds": 1800,
+  "poll_seconds": 5,
+  "parent_run_id": null,
+  "request": {
+    "model": "acestep-v15-turbo",
+    "task_type": "text2music",
+    "prompt": "Mandarin melancholic urban folk ballad. Young male vocal, low-mid register, intimate, tired and restrained. Sparse upright piano, soft acoustic guitar, warm bass and brushed drums. Minor-key feeling, late-night atmosphere, restrained singing.",
+    "lyrics": "[Verse]\n天快亮了\n我还是没有睡\n窗外的灯一盏一盏熄灭\n有些话想了很久\n最后还是没有说给谁听\n\n[Chorus]\n如果明天还是这样\n那就继续往前走",
+    "thinking": false,
+    "use_cot_caption": false,
+    "use_cot_language": false,
+    "vocal_language": "zh",
+    "bpm": 68,
+    "key_scale": "A minor",
+    "time_signature": "4",
+    "audio_duration": 30,
+    "batch_size": 1,
+    "inference_steps": 8,
+    "infer_method": "ode",
+    "use_random_seed": true,
+    "seed": -1,
+    "audio_format": "wav"
+  },
+  "review": {
+    "preview_bitrate": "192k",
+    "publish_full_audio": false,
+    "auto_commit": true,
+    "auto_push": true
+  }
+}
