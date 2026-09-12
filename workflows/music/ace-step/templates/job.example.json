@@ -1,0 +1,33 @@
+{
+  "schema_version": 1,
+  "title": "示例歌曲",
+  "api_base": "http://127.0.0.1:8001",
+  "timeout_seconds": 7200,
+  "poll_seconds": 5,
+  "parent_run_id": null,
+  "request": {
+    "model": "acestep-v15-xl-sft",
+    "lm_model_path": "acestep-5Hz-lm-4B",
+    "lm_backend": "mlx",
+    "task_type": "text2music",
+    "prompt_file": "generated/style.txt",
+    "lyrics_file": "generated/lyrics.txt",
+    "thinking": false,
+    "use_cot_caption": false,
+    "use_cot_language": false,
+    "vocal_language": "zh",
+    "audio_duration": 240,
+    "batch_size": 1,
+    "inference_steps": 50,
+    "infer_method": "ode",
+    "use_random_seed": true,
+    "seed": -1,
+    "audio_format": "wav"
+  },
+  "review": {
+    "preview_bitrate": "192k",
+    "publish_full_audio": false,
+    "auto_commit": true,
+    "auto_push": true
+  }
+}
