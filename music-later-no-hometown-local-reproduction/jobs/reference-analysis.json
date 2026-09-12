@@ -1,0 +1,20 @@
+{
+  "job_version": 1,
+  "task_slug": "later-no-hometown",
+  "api": {
+    "base_url": "http://127.0.0.1:8001",
+    "server_log": "~/AI/logs/music/acestep-api.log"
+  },
+  "reference_sha256": "176c81b30cbd68de6cd7c900d1513160f9a6a591eb7e9bed65d848f273c48b0e",
+  "request": {
+    "model": "acestep-v15-xl-sft",
+    "lm_model_path": "acestep-5Hz-lm-4B",
+    "lm_backend": "mlx",
+    "src_audio_path": "/Users/jerson/AI/private/music-source/later-no-hometown/后来没有故乡.reference-48k.wav",
+    "full_analysis_only": true,
+    "thinking": false,
+    "use_cot_caption": false,
+    "use_cot_language": false,
+    "vocal_language": "zh"
+  }
+}
