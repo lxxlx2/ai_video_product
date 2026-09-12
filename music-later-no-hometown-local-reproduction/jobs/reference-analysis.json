@@ -5,7 +5,7 @@
     "base_url": "http://127.0.0.1:8001",
     "server_log": "~/AI/logs/music/acestep-api.log"
   },
-  "reference_sha256": "288edd5197a7535d9dadfac27dc1aea4699999e16dc6dfeaf1291cc882afd6775",
+  "reference_sha256": "288edd5197a7535d9dadfac27dc1aea469999e16dc6dfeaf1291cc882afd6775",
   "reference_kind": "working_wav",
   "request": {
     "model": "acestep-v15-xl-sft",
