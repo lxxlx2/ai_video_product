@@ -95,10 +95,13 @@ bash "$SCRIPT_DIR/music_api_service.sh" ensure
 bash "$SCRIPT_DIR/music_api_service.sh" check-ready
 
 printf '\n===== T2 REFERENCE ANALYSIS =====\n'
-if ! python3 "$SCRIPT_DIR/reference_analysis.py" "$JOB_FILE"; then
-  code=$?
-  say_error "GENERATION_FAILED" "reference analysis runner failed with exit code $code"
-  exit "$code"
+set +e
+python3 "$SCRIPT_DIR/reference_analysis.py" "$JOB_FILE"
+analysis_code=$?
+set -e
+if [[ "$analysis_code" -ne 0 ]]; then
+  say_error "GENERATION_FAILED" "reference analysis runner failed with exit code $analysis_code"
+  exit "$analysis_code"
 fi
 
 printf '\n===== T2 PUBLISH ANALYSIS SNAPSHOT =====\n'
