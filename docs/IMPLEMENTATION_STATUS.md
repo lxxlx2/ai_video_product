@@ -123,7 +123,7 @@ LOADED_LM_MODEL=acestep-5Hz-lm-4B
 
 ## Phase 2 / T2 参考音频深度分析
 
-状态：`IMPLEMENTED, WAITING LOCAL ACCEPTANCE`
+状态：`RETRY AFTER MULTIPART FIX`
 
 当前实现：
 
@@ -132,6 +132,7 @@ music-later-no-hometown-local-reproduction/scripts/reference_analysis.py
 music-later-no-hometown-local-reproduction/scripts/run_reference_analysis.sh
 music-later-no-hometown-local-reproduction/scripts/accept_reference_analysis.sh
 music-later-no-hometown-local-reproduction/jobs/reference-analysis.json
+music-later-no-hometown-local-reproduction/docs/REFERENCE_ANALYSIS_OPERATIONS.md
 ```
 
 T2 目标：
@@ -140,13 +141,43 @@ T2 目标：
 验证工作 WAV SHA256
 验证 ffprobe
 复用 T1 ensure_ready
+通过 multipart src_audio 上传参考 WAV
 执行 full_analysis_only
-保存 task_id / request / health / engine commit / Git commit
+保存 task_id / request / transport / health / engine commit / Git commit
 提取 BPM / Key / Time Signature / Duration / Genre / Language / Caption
 保留 audio_codes 和 metas
 自动提交并 push 分析快照
 验证远端与本地一致
 ```
+
+### 第一次本地验收结果
+
+2026-09-13 第一次验收完成了 READY、SHA256、ffprobe 和版本记录 Gate，在任务提交阶段失败：
+
+```text
+ERROR_CODE=API_SUBMIT_FAILED
+HTTP 400 Bad Request
+{"detail":"absolute audio file paths are not allowed"}
+```
+
+固定的 ACE-Step commit 对 `/release_task` 的绝对音频路径执行安全限制。JSON 中传入 `/Users/...reference-48k.wav` 会被拒绝；multipart 上传字段 `src_audio` 会由 ACE-Step 保存到允许的系统临时目录。
+
+已完成修复：
+
+```text
+reference_analysis.py
+  本机路径继续用于 SHA256 / ffprobe / 运行记录
+  API 提交改用 multipart/form-data
+  工作 WAV 上传字段 src_audio
+  JSON/结果新增 transport 记录
+
+music_job.py
+  src_audio_path       -> multipart src_audio
+  reference_audio_path -> multipart reference_audio
+  无本地音频输入       -> application/json
+```
+
+该修复同时覆盖后续短片段 cover/remix 和完整歌曲任务，避免 T5/T7 再遇到相同错误。
 
 输出：
 
@@ -163,7 +194,7 @@ bash music-later-no-hometown-local-reproduction/scripts/run_reference_analysis.s
 
 该模式只重试已有分析结果的发布，不重新执行模型分析。
 
-### T2 本地验收
+### T2 本地重验
 
 执行：
 
@@ -171,7 +202,15 @@ bash music-later-no-hometown-local-reproduction/scripts/run_reference_analysis.s
 bash music-later-no-hometown-local-reproduction/scripts/accept_reference_analysis.sh
 ```
 
-通过标志：
+提交阶段应出现：
+
+```text
+transport=multipart/form-data
+audio_field=src_audio
+task_id=...
+```
+
+最终通过标志：
 
 ```text
 T2_REFERENCE_ANALYSIS_ACCEPTANCE_PASS
@@ -188,7 +227,7 @@ T5 short cover experiment
 ## 后续顺序
 
 ```text
-T2 reference analysis              WAITING LOCAL ACCEPTANCE
+T2 reference analysis              RETRY AFTER MULTIPART FIX
 T3 clip prepare                    PENDING
 T4 experiment job                 PENDING
 T5 short cover experiment         PENDING
