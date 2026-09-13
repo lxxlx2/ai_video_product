@@ -100,7 +100,7 @@ python3 "$SCRIPT_DIR/reference_analysis.py" "$JOB_FILE"
 analysis_code=$?
 set -e
 if [[ "$analysis_code" -ne 0 ]]; then
-  say_error "GENERATION_FAILED" "reference analysis runner failed with exit code $analysis_code"
+  printf 'REFERENCE_ANALYSIS_RUN_FAILED exit_code=%s\n' "$analysis_code" >&2
   exit "$analysis_code"
 fi
 
