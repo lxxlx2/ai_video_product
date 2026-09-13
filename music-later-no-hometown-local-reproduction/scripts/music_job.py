@@ -5,7 +5,8 @@
 1. 完整候选保留在 ~/AI/private/music-runs/；
 2. Git 只保存轻量 review.mp3、请求、结果、SHA 和日志；
 3. 成功和失败都尽量生成 review 快照，便于远端排查；
-4. 只依赖 Python 标准库和本机 ffmpeg/ffprobe。
+4. 本地音频通过 multipart 上传给 ACE-Step，避免传递被拒绝的绝对路径；
+5. 只依赖 Python 标准库和本机 curl/ffmpeg/ffprobe。
 """
 
 from __future__ import annotations
@@ -18,7 +19,9 @@ from pathlib import Path
 import shutil
 import subprocess
 import sys
+import tempfile
 import time
+import urllib.error
 import urllib.request
 import uuid
 
@@ -42,8 +45,68 @@ def http_json(url: str, method: str = "GET", payload: dict | None = None, timeou
         data = json.dumps(payload, ensure_ascii=False).encode("utf-8")
         headers["Content-Type"] = "application/json"
     req = urllib.request.Request(url, data=data, headers=headers, method=method)
-    with urllib.request.urlopen(req, timeout=timeout) as resp:
-        return json.loads(resp.read().decode("utf-8"))
+    try:
+        with urllib.request.urlopen(req, timeout=timeout) as resp:
+            return json.loads(resp.read().decode("utf-8"))
+    except urllib.error.HTTPError as exc:
+        body = exc.read().decode("utf-8", errors="replace")
+        raise RuntimeError(f"HTTP {exc.code} {exc.reason}: {body}") from exc
+
+
+def form_string(value: object) -> str:
+    if isinstance(value, bool):
+        return "true" if value else "false"
+    if value is None:
+        return ""
+    if isinstance(value, (dict, list)):
+        return json.dumps(value, ensure_ascii=False, separators=(",", ":"))
+    return str(value)
+
+
+def http_multipart_json(
+    url: str,
+    fields: dict,
+    files: dict[str, Path],
+    timeout: int = 300,
+) -> dict:
+    """Use curl multipart upload so ACE-Step stores audio in its allowed temp dir."""
+    if not shutil.which("curl"):
+        raise RuntimeError("curl not found; multipart audio upload requires curl")
+
+    fd, response_name = tempfile.mkstemp(prefix="acestep-release-task-", suffix=".json")
+    os.close(fd)
+    response_path = Path(response_name)
+    try:
+        cmd = [
+            "curl", "-sS",
+            "--max-time", str(timeout),
+            "-o", str(response_path),
+            "-w", "%{http_code}",
+            "-X", "POST", url,
+        ]
+        for key, value in fields.items():
+            if value is None:
+                continue
+            cmd.extend(["--form-string", f"{key}={form_string(value)}"])
+        for field_name, file_path in files.items():
+            cmd.extend(["-F", f"{field_name}=@{file_path}"])
+
+        proc = subprocess.run(cmd, capture_output=True, text=True)
+        http_code = proc.stdout.strip()
+        body = response_path.read_text(encoding="utf-8", errors="replace") if response_path.exists() else ""
+        if proc.returncode != 0:
+            raise RuntimeError(f"curl failed rc={proc.returncode}: {proc.stderr.strip()}")
+        if http_code != "200":
+            raise RuntimeError(f"HTTP {http_code or 'unknown'}: {body}")
+        try:
+            return json.loads(body)
+        except Exception as exc:
+            raise RuntimeError(f"invalid JSON response: {body[:2000]}") from exc
+    finally:
+        try:
+            response_path.unlink()
+        except OSError:
+            pass
 
 
 def resolve_text(job_path: Path, value: str | None, file_value: str | None) -> str:
@@ -127,21 +190,44 @@ def main() -> int:
         return 4
 
     expected_reference_sha = job.get("reference_sha256")
-    src_audio = request_body.get("src_audio_path")
-    reference_audio = request_body.get("reference_audio_path")
-    checked_reference = src_audio or reference_audio
-    if checked_reference:
-        ref = Path(os.path.expanduser(checked_reference)).resolve()
-        if not ref.exists():
-            print(f"ERROR: reference/source audio missing: {ref}", file=sys.stderr)
+    src_audio_value = request_body.get("src_audio_path")
+    reference_audio_value = request_body.get("reference_audio_path")
+    local_audio_files: dict[str, Path] = {}
+    checked_reference_sha = None
+
+    if src_audio_value:
+        src_audio = Path(os.path.expanduser(str(src_audio_value))).resolve()
+        if not src_audio.is_file():
+            print(f"ERROR: source audio missing: {src_audio}", file=sys.stderr)
             return 5
-        request_body["src_audio_path" if src_audio else "reference_audio_path"] = str(ref)
-        actual = sha256_file(ref)
-        if expected_reference_sha and actual.lower() != expected_reference_sha.lower():
+        request_body["src_audio_path"] = str(src_audio)
+        local_audio_files["src_audio"] = src_audio
+        checked_reference_sha = sha256_file(src_audio)
+
+    if reference_audio_value:
+        reference_audio = Path(os.path.expanduser(str(reference_audio_value))).resolve()
+        if not reference_audio.is_file():
+            print(f"ERROR: reference audio missing: {reference_audio}", file=sys.stderr)
+            return 5
+        request_body["reference_audio_path"] = str(reference_audio)
+        local_audio_files["reference_audio"] = reference_audio
+        # Existing jobs expose one reference_sha256. If both inputs are present,
+        # apply it to src_audio, which is the primary cover/remix source.
+        if not src_audio_value:
+            checked_reference_sha = sha256_file(reference_audio)
+
+    if expected_reference_sha and checked_reference_sha:
+        if checked_reference_sha.lower() != str(expected_reference_sha).lower():
             print("ERROR: reference SHA-256 mismatch", file=sys.stderr)
             print(f"expected: {expected_reference_sha}", file=sys.stderr)
-            print(f"actual:   {actual}", file=sys.stderr)
+            print(f"actual:   {checked_reference_sha}", file=sys.stderr)
             return 6
+
+    transport = {
+        "content_type": "multipart/form-data" if local_audio_files else "application/json",
+        "audio_fields": sorted(local_audio_files.keys()),
+        "client_paths": {key: str(value) for key, value in local_audio_files.items()},
+    }
 
     run_id = time.strftime("%Y%m%d-%H%M%S") + "-" + uuid.uuid4().hex[:8]
     private_root = Path(os.path.expanduser(job.get("private_run_root", "~/AI/private/music-runs")))
@@ -195,6 +281,7 @@ def main() -> int:
             "candidate_size": candidate_path.stat().st_size if candidate_path and candidate_path.exists() else None,
             "ffprobe": probe,
             "request": request_body,
+            "transport": transport,
             "api_query_response": last_query,
         }
         write_json(run_dir / "run.json", run_meta)
@@ -222,7 +309,6 @@ def main() -> int:
             except Exception as e:
                 log(f"WARN review mp3 transcode failed: {e}")
 
-        # runner.log 在 finalize 过程中可能新增行，再复制一次。
         shutil.copy2(runner_log, review_dir / "runner.log")
 
     log(f"run_id={run_id}")
@@ -231,6 +317,9 @@ def main() -> int:
     log(f"task_type={request_body.get('task_type', 'text2music')}")
     log(f"model={request_body.get('model')}")
     log(f"lm_model_path={request_body.get('lm_model_path')}")
+    log(f"transport={transport['content_type']}")
+    if local_audio_files:
+        log(f"audio_fields={','.join(sorted(local_audio_files.keys()))}")
     write_json(run_dir / "request.json", request_body)
 
     try:
@@ -243,7 +332,20 @@ def main() -> int:
         return 10
 
     try:
-        submit = http_json(base_url + "/release_task", "POST", request_body, timeout=60)
+        if local_audio_files:
+            submit_fields = {
+                key: value
+                for key, value in request_body.items()
+                if key not in {"src_audio_path", "reference_audio_path"}
+            }
+            submit = http_multipart_json(
+                base_url + "/release_task",
+                submit_fields,
+                local_audio_files,
+                timeout=300,
+            )
+        else:
+            submit = http_json(base_url + "/release_task", "POST", request_body, timeout=60)
         write_json(run_dir / "submit_response.json", submit)
     except Exception as e:
         error_text = f"release_task failed: {e}"
