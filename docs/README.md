@@ -18,9 +18,15 @@
 
 定义：系统架构、仓库和本机目录、Job / Run 数据模型、状态机、模型服务生命周期、Adapter、Orchestrator、Git 提交策略、Git LFS、Finalize、Cleanup、Codex 接管协议和技术实施顺序。
 
-实现前先完成技术评审，代码和脚本需要符合该设计。
+### 3. 技术实施方案
 
-### 3. 仓库结构专项规范
+[`TECHNICAL_IMPLEMENTATION_PLAN.md`](TECHNICAL_IMPLEMENTATION_PLAN.md)
+
+定义：当前机器和模型环境、控制面与运行面分层、Job 契约、Run 状态机、ACE-Step 服务管理、参考分析、短片段实验、完整生成、Review、Finalize、Cleanup、测试策略、失败恢复、Codex 接管和分阶段实施任务。
+
+该文档用于把技术设计进一步落到可执行阶段。进入编码前优先按该方案拆分任务和验收 Gate。
+
+### 4. 仓库结构专项规范
 
 [`REPOSITORY_STRUCTURE.md`](REPOSITORY_STRUCTURE.md)
 
@@ -28,7 +34,7 @@
 
 该文档是技术设计中仓库结构的专项展开。
 
-### 4. 产品生产工作流
+### 5. 产品生产工作流
 
 [`PRODUCT_WORKFLOW.md`](PRODUCT_WORKFLOW.md)
 
@@ -44,6 +50,8 @@
 PRODUCT_REQUIREMENTS.md
         ↓
 TECHNICAL_DESIGN.md
+        ↓
+TECHNICAL_IMPLEMENTATION_PLAN.md
         ↓
 REPOSITORY_STRUCTURE.md / PRODUCT_WORKFLOW.md
         ↓
@@ -84,11 +92,11 @@ progress.md
 ```text
 PRD 已评审通过
   ↓
-技术设计 V0.1 已建立
+技术设计已建立
   ↓
-技术评审
+技术实施方案 V0.1 已建立
   ↓
-ACE-Step API READY 验证
+Phase 1 服务层稳定
   ↓
 参考分析
   ↓
