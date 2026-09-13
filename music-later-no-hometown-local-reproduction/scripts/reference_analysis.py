@@ -12,6 +12,7 @@ import re
 import shutil
 import subprocess
 import sys
+import tempfile
 import time
 import urllib.error
 import urllib.request
@@ -79,6 +80,68 @@ def http_json(url: str, method: str = "GET", payload: dict | None = None, timeou
     except urllib.error.HTTPError as exc:
         body = exc.read().decode("utf-8", errors="replace")
         raise RuntimeError(f"HTTP {exc.code} {exc.reason}: {body}") from exc
+
+
+def form_string(value: object) -> str:
+    if isinstance(value, bool):
+        return "true" if value else "false"
+    if value is None:
+        return ""
+    if isinstance(value, (dict, list)):
+        return json.dumps(value, ensure_ascii=False, separators=(",", ":"))
+    return str(value)
+
+
+def http_multipart_json(
+    url: str,
+    fields: dict,
+    files: dict[str, Path],
+    timeout: int = 300,
+) -> dict:
+    """Submit multipart/form-data without loading audio bytes into Python memory.
+
+    ACE-Step 1.5 rejects arbitrary absolute audio paths in JSON requests. Uploaded
+    audio is accepted because the server persists it under its system temp dir.
+    Scalar values use --form-string so prompt/lyrics values cannot be interpreted
+    by curl as local file references.
+    """
+    if not shutil.which("curl"):
+        raise RuntimeError("curl not found; multipart audio upload requires curl")
+
+    fd, response_name = tempfile.mkstemp(prefix="acestep-release-task-", suffix=".json")
+    os.close(fd)
+    response_path = Path(response_name)
+    try:
+        cmd = [
+            "curl", "-sS",
+            "--max-time", str(timeout),
+            "-o", str(response_path),
+            "-w", "%{http_code}",
+            "-X", "POST", url,
+        ]
+        for key, value in fields.items():
+            if value is None:
+                continue
+            cmd.extend(["--form-string", f"{key}={form_string(value)}"])
+        for field_name, file_path in files.items():
+            cmd.extend(["-F", f"{field_name}=@{file_path}"])
+
+        proc = subprocess.run(cmd, capture_output=True, text=True)
+        http_code = proc.stdout.strip()
+        body = response_path.read_text(encoding="utf-8", errors="replace") if response_path.exists() else ""
+        if proc.returncode != 0:
+            raise RuntimeError(f"curl failed rc={proc.returncode}: {proc.stderr.strip()}")
+        if http_code != "200":
+            raise RuntimeError(f"HTTP {http_code or 'unknown'}: {body}")
+        try:
+            return json.loads(body)
+        except Exception as exc:
+            raise RuntimeError(f"invalid JSON response: {body[:2000]}") from exc
+    finally:
+        try:
+            response_path.unlink()
+        except OSError:
+            pass
 
 
 def normalize_result(item: dict) -> dict:
@@ -157,6 +220,8 @@ def main() -> int:
     if not media_info.get("available") or media_info.get("error"):
         return fail("REFERENCE_INVALID", f"ffprobe could not validate source audio: {media_info}", 8)
 
+    # Keep the client path in the recorded request for reproducibility. The API
+    # transport removes it and uploads the actual file as multipart field src_audio.
     request_body["src_audio_path"] = str(src)
     request_body["full_analysis_only"] = True
     expected_dit = str(request_body.get("model") or EXPECTED_DIT)
@@ -185,6 +250,13 @@ def main() -> int:
     acestep_commit = command_output(["git", "rev-parse", "HEAD"], cwd=runtime) if runtime.is_dir() else None
     job_sha = sha256_file(job_path)
 
+    transport = {
+        "content_type": "multipart/form-data",
+        "audio_field": "src_audio",
+        "client_path": str(src),
+        "reason": "ACE-Step accepts uploaded audio and rejects arbitrary absolute audio paths",
+    }
+
     print("REFERENCE_ANALYSIS_START")
     print(f"api={base_url}")
     print(f"source={src}")
@@ -192,12 +264,25 @@ def main() -> int:
     print(f"job_sha256={job_sha}")
     print(f"job_commit={job_commit or 'unknown'}")
     print(f"acestep_commit={acestep_commit or 'unknown'}")
+    print("transport=multipart/form-data")
+    print("audio_field=src_audio")
+
+    submit_fields = {
+        key: value
+        for key, value in request_body.items()
+        if key not in {"src_audio_path", "reference_audio_path"}
+    }
 
     started_at = time.strftime("%Y-%m-%dT%H:%M:%S%z")
     try:
-        submit = http_json(base_url + "/release_task", "POST", request_body, timeout=60)
+        submit = http_multipart_json(
+            base_url + "/release_task",
+            submit_fields,
+            {"src_audio": src},
+            timeout=300,
+        )
     except Exception as exc:
-        return fail("API_SUBMIT_FAILED", f"release_task failed: {exc}", 11)
+        return fail("API_SUBMIT_FAILED", f"release_task multipart upload failed: {exc}", 11)
 
     if submit.get("code") != 200 or not isinstance(submit.get("data"), dict):
         print(json.dumps(submit, ensure_ascii=False, indent=2), file=sys.stderr)
@@ -243,7 +328,7 @@ def main() -> int:
     summary = result_summary(normalized.get("result"))
     normalized.update(
         {
-            "analysis_schema_version": 1,
+            "analysis_schema_version": 2,
             "recorded_at": time.strftime("%Y-%m-%dT%H:%M:%S%z"),
             "started_at": started_at,
             "job": {"path": str(job_path), "sha256": job_sha, "git_commit": job_commit},
@@ -258,6 +343,7 @@ def main() -> int:
             "reference": {"path": str(src), "sha256": actual_sha, "ffprobe": media_info},
             "health": health_data,
             "request": request_body,
+            "transport": transport,
             "summary": summary,
         }
     )
@@ -276,6 +362,8 @@ def main() -> int:
         f"job_sha256={job_sha}",
         f"job_commit={job_commit or 'unknown'}",
         f"acestep_commit={acestep_commit or 'unknown'}",
+        "transport=multipart/form-data",
+        "audio_field=src_audio",
         "summary=" + json.dumps(summary, ensure_ascii=False, indent=2),
     ]
     out_log.write_text("\n".join(log_lines) + "\n", encoding="utf-8")
