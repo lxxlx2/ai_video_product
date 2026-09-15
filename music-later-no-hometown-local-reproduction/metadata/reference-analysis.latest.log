@@ -1,0 +1,25 @@
+REFERENCE_ANALYSIS_RESULT
+task_id=09121dc7-e44b-4169-9eee-0bae68b1dd01
+status=1
+reference_sha256=288edd5197a7535d9dadfac27dc1aea469999e16dc6dfeaf1291cc882afd6775
+job_sha256=bfac0023da4d8a987b1dc4f2f43443ff4885f0837ab4e3e638b7745daa4b8467
+job_commit=eb9345fa2fa2075a329716346622f9777555ac4a
+acestep_commit=ca1e85fe9430179831e6bc6be790c332190a3866
+transport=multipart/form-data
+audio_field=src_audio
+summary={
+  "valid": true,
+  "status_message": "Full Hardware Analysis Success",
+  "bpm": 130,
+  "keyscale": "B♭ major",
+  "timesignature": "4",
+  "duration": 336,
+  "genre": "Chinese folk-pop",
+  "language": "zh",
+  "prompt": "A gentle, narrative-driven Chinese folk-pop song built around a clean, fingerpicked acoustic guitar and a warm, conversational male lead vocal. The arrangement starts simply, with the guitar and voice setting a nostalgic scene. A subtle bass guitar and a light, steady drum beat enter to lift the chorus, adding gentle momentum. The song's structure includes a heartfelt spoken-word section that feels like a personal story being shared. The track concludes with a tender piano melody playing over the fading acoustic guitar, bringing the story to a peaceful and reflective close.",
+  "lyrics_present": true,
+  "metas_present": true,
+  "audio_codes_present": true,
+  "audio_codes_length": 33160,
+  "audio_paths": []
+}

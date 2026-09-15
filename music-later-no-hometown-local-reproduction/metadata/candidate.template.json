@@ -1,0 +1,36 @@
+{
+  "schema_version": "0.1",
+  "candidate_id": "FILL_ME",
+  "created_at": "FILL_ME_ISO8601",
+  "profile": "repro",
+  "mode": "remix",
+  "dit_model": "acestep-v15-xl-turbo",
+  "lm_model": "acestep-5Hz-lm-1.7B",
+  "backend": "mlx",
+  "seed": -1,
+  "remix_strength": 0.85,
+  "bpm": "FILL_FROM_AUDIO_UNDERSTANDING",
+  "key_scale": "FILL_FROM_AUDIO_UNDERSTANDING",
+  "time_signature": "FILL_FROM_AUDIO_UNDERSTANDING",
+  "duration_seconds": 335.84,
+  "reference_sha256": "176c81b30cbd68de6cd7c900d1513160f9a6a591eb7e9bed65d848f273c48b0e",
+  "output_sha256": "FILL_ME",
+  "output_path_local_only": "FILL_ME",
+  "scores": {
+    "melody_similarity_1_to_5": null,
+    "structure_similarity_1_to_5": null,
+    "vocal_character_1_to_5": null,
+    "lyrics_clarity_1_to_5": null,
+    "arrangement_similarity_1_to_5": null,
+    "overall_1_to_5": null
+  },
+  "problem_regions": [
+    {
+      "start_seconds": null,
+      "end_seconds": null,
+      "note": ""
+    }
+  ],
+  "decision": "KEEP_OR_REJECT",
+  "notes": ""
+}
