@@ -11,14 +11,16 @@ REL_LOG="music-later-no-hometown-local-reproduction/metadata/reference-analysis.
 EXPECTED_SHA="288edd5197a7535d9dadfac27dc1aea469999e16dc6dfeaf1291cc882afd6775"
 MODE="${1:-run}"
 
-if [[ "$MODE" != "run" && "$MODE" != "publish-only" ]]; then
-  printf 'Usage: bash %s [run|publish-only]\n' "$0" >&2
+if [[ "$MODE" != "run" && "$MODE" != "publish-only" && "$MODE" != "verify-only" ]]; then
+  printf 'Usage: bash %s [run|publish-only|verify-only]\n' "$0" >&2
   exit 64
 fi
 
 if [[ "$MODE" == "publish-only" ]]; then
   printf '===== T2 STEP 1: publish existing successful analysis =====\n'
   bash "$SCRIPT_DIR/run_reference_analysis.sh" publish-only
+elif [[ "$MODE" == "verify-only" ]]; then
+  printf '===== T2 STEP 1: skip run/publish and verify existing published analysis =====\n'
 else
   printf '===== T2 STEP 1: run and publish reference analysis =====\n'
   bash "$SCRIPT_DIR/run_reference_analysis.sh"
@@ -65,8 +67,11 @@ if not summary.get("audio_codes_present") or not summary.get("metas_present"):
     raise SystemExit("summary does not confirm audio_codes/metas")
 
 transport = data.get("transport") or {}
-if transport.get("type") != "multipart/form-data":
+transport_type = transport.get("content_type") or transport.get("type")
+if transport_type != "multipart/form-data":
     raise SystemExit(f"unexpected transport: {transport}")
+if transport.get("audio_field") != "src_audio":
+    raise SystemExit(f"unexpected audio field: {transport}")
 
 print("LOCAL_ANALYSIS_VALID=true")
 print("TASK_ID=" + str(data.get("task_id") or "none"))
@@ -76,7 +81,8 @@ print("TIMESIGNATURE=" + str(summary.get("timesignature")))
 print("DURATION=" + str(summary.get("duration")))
 print("LANGUAGE=" + str(summary.get("language")))
 print("AUDIO_CODES_LENGTH=" + str(summary.get("audio_codes_length")))
-print("TRANSPORT=" + str(transport.get("type")))
+print("TRANSPORT=" + str(transport_type))
+print("AUDIO_FIELD=" + str(transport.get("audio_field")))
 print("ANALYSIS_JOB_COMMIT=" + str((data.get("job") or {}).get("git_commit") or "unknown"))
 print("ACESTEP_COMMIT=" + str(engine.get("git_commit") or "unknown"))
 PY
@@ -87,8 +93,9 @@ LOCAL_SHA="$(git -C "$REPO_ROOT" rev-parse HEAD)"
 REMOTE_SHA="$(git -C "$REPO_ROOT" rev-parse "origin/$BRANCH")"
 if [[ "$LOCAL_SHA" != "$REMOTE_SHA" ]]; then
   printf 'ERROR_CODE=GIT_PUSH_FAILED\n' >&2
-  printf 'ERROR: local and remote branch tips differ after analysis publication\n' >&2
+  printf 'ERROR: local and remote branch tips differ before publication verification\n' >&2
   printf 'LOCAL_SHA=%s\nREMOTE_SHA=%s\n' "$LOCAL_SHA" "$REMOTE_SHA" >&2
+  printf 'Run git pull --ff-only origin %s and retry verify-only.\n' "$BRANCH" >&2
   exit 31
 fi
 
