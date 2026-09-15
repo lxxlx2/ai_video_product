@@ -35,3 +35,8 @@ work/
 analysis/
 *.log
 .DS_Store
+
+# Stable review/analysis logs are intentionally published for reproducibility.
+!metadata/reference-analysis.latest.log
+!review/latest/runner.log
+!review/latest/server.log
