@@ -31,18 +31,6 @@ docs/PRODUCT_WORKFLOW.md
 
 状态：`PASS`
 
-实现：
-
-```text
-music-later-no-hometown-local-reproduction/scripts/music_api_service.sh
-music-later-no-hometown-local-reproduction/scripts/start_music_api_macos.sh
-music-later-no-hometown-local-reproduction/scripts/status_music_api_macos.sh
-music-later-no-hometown-local-reproduction/scripts/stop_music_api_macos.sh
-music-later-no-hometown-local-reproduction/scripts/ensure_music_api_ready.sh
-music-later-no-hometown-local-reproduction/scripts/accept_music_api_service.sh
-music-later-no-hometown-local-reproduction/docs/SERVICE_OPERATIONS.md
-```
-
 READY Gate：
 
 ```text
@@ -67,7 +55,7 @@ T1_SERVICE_ACCEPTANCE_PASS
 
 ## Phase 2 / T2 参考音频深度分析
 
-状态：`ANALYSIS PASS, WAITING PUBLISH-ONLY ACCEPTANCE`
+状态：`ANALYSIS + PUBLICATION PASS, WAITING VERIFY-ONLY ACCEPTANCE`
 
 实现：
 
@@ -89,7 +77,7 @@ HTTP 400 Bad Request
 {"detail":"absolute audio file paths are not allowed"}
 ```
 
-固定 ACE-Step commit 会拒绝系统临时目录之外的绝对音频路径。已将参考音频和后续本地音频输入统一改成 multipart 文件上传。
+固定 ACE-Step commit 会拒绝系统临时目录之外的绝对音频路径。参考音频及后续本地音频输入已统一改成 multipart 文件上传。
 
 ### T2 第二次验收
 
@@ -130,44 +118,55 @@ heartfelt spoken-word section
 tender piano ending over fading acoustic guitar
 ```
 
-这些字段属于模型分析结果，后续短片段实验继续以实际试听作为质量 Gate。
+模型转写歌词存在明显错识别，因此后续只把 BPM、Key、结构、配器、音色和 audio_codes 作为分析线索，正式歌词继续使用项目内人工确认版本。
 
-### T2 发布阶段修复
+### T2 Git 发布
 
-模型分析结束后，Git 发布受到任务级 `.gitignore` 的 `*.log` 规则影响：
+第一次发布受到任务级 `.gitignore` 的 `*.log` 规则影响，已修复 allowlist 和 `git add -f`。
+
+2026-09-15 已成功发布：
 
 ```text
+REFERENCE_ANALYSIS_PUBLISHED
+PUBLISHED_COMMIT=a527bb4eb1df0c5d70df72212e29c694ce2d41c0
+```
+
+远端已经包含：
+
+```text
+metadata/reference-analysis.latest.json
 metadata/reference-analysis.latest.log
 ```
 
-已修复：
+### T2 验收脚本字段兼容修复
+
+发布成功后，本地验收脚本误读 `transport` schema：
 
 ```text
-.gitignore
-  允许 metadata/reference-analysis.latest.log
-  允许 review/latest/runner.log
-  允许 review/latest/server.log
+实际字段:
+transport.content_type=multipart/form-data
 
-run_reference_analysis.sh
-  精确发布 allowlist
-  对固定 JSON/log 使用 git add -f
-
-accept_reference_analysis.sh
-  支持 publish-only
-  不重新执行模型分析
-  验证远端 JSON 和 log 均存在且与本地一致
+旧验收脚本预期:
+transport.type=multipart/form-data
 ```
+
+分析结果本身有效。验收脚本已修复为优先读取 `content_type`，兼容旧 `type`，并额外校验：
+
+```text
+audio_field=src_audio
+```
+
+新增 `verify-only` 模式，可在不重新分析、不重新发布的情况下完成最终 T2 验收。
 
 当前只需要执行：
 
 ```bash
-bash music-later-no-hometown-local-reproduction/scripts/accept_reference_analysis.sh publish-only
+bash music-later-no-hometown-local-reproduction/scripts/accept_reference_analysis.sh verify-only
 ```
 
 最终通过标志：
 
 ```text
-REFERENCE_ANALYSIS_PUBLISHED
 LOCAL_ANALYSIS_VALID=true
 REMOTE_ANALYSIS_VERIFIED=true
 REMOTE_LOG_VERIFIED=true
@@ -177,7 +176,7 @@ T2_REFERENCE_ANALYSIS_ACCEPTANCE_PASS
 ## 后续顺序
 
 ```text
-T2 reference analysis              WAITING PUBLISH-ONLY ACCEPTANCE
+T2 reference analysis              WAITING VERIFY-ONLY ACCEPTANCE
 T3 clip prepare                    PENDING
 T4 experiment job                 PENDING
 T5 short cover experiment         PENDING
