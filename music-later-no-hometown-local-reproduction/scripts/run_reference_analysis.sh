@@ -44,7 +44,9 @@ publish_outputs() {
     return 1
   fi
 
-  git -C "$REPO_ROOT" add -- "$REL1" "$REL2"
+  # These two exact files are the T2 publication allowlist. Force-add is deliberate:
+  # broad *.log ignore rules must never block the stable analysis snapshot.
+  git -C "$REPO_ROOT" add -f -- "$REL1" "$REL2"
   if ! git -C "$REPO_ROOT" diff --cached --quiet -- "$REL1" "$REL2"; then
     if ! git -C "$REPO_ROOT" commit --only -m "analysis(music): refresh reference analysis" -- "$REL1" "$REL2"; then
       say_error "GIT_COMMIT_FAILED" "failed to commit reference analysis outputs"
@@ -79,6 +81,7 @@ check_branch
 
 MODE="${1:-run}"
 if [[ "$MODE" == "publish-only" ]]; then
+  printf 'REFERENCE_ANALYSIS_PUBLISH_ONLY existing_analysis=true\n'
   publish_outputs
   exit 0
 fi
