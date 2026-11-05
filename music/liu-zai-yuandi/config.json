@@ -1,0 +1,19 @@
+{
+  "prompt": "Original Mandarin Chinese melancholic indie pop ballad with restrained melodic rap verses and an emotional soaring chorus; intimate warm male voice, natural Mandarin pronunciation, reflective nostalgia, homesickness, bittersweet hope. 80 BPM, D minor, 4/4. Soft felt piano intro, warm atmospheric synthesizer pads, restrained sub bass, modern minimal hip-hop drums, delicate guitar textures, cinematic strings building in the final chorus; expressive dynamics, clear vocals, clean studio mix, no duet, no female singer. Entirely original melody and arrangement, no imitation of any existing singer or song.",
+  "vocal_language": "zh",
+  "model": "acestep-v15-turbo",
+  "thinking": false,
+  "use_format": false,
+  "use_cot_caption": false,
+  "use_cot_language": false,
+  "bpm": 80,
+  "key_scale": "D Minor",
+  "time_signature": "4",
+  "audio_duration": 210,
+  "audio_format": "mp3",
+  "inference_steps": 8,
+  "batch_size": 1,
+  "use_random_seed": false,
+  "seed": 20261106,
+  "task_type": "text2music"
+}
